@@ -3,7 +3,7 @@ from plugins.MODSDKSpring.core.ListenEvent import ListenEvent
 from plugins.MODSDKSpring.core.Autowired import Autowired
 from plugins.MODSDKSpring.core.Lazy import Lazy
 
-@ListenEvent.InitComponentClient
+@ListenEvent.InitComponentClient(namespace="special", systemName="specialName")
 class TestClientComponent(object):
     
     @Lazy

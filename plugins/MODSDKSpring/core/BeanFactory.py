@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import constant.SystemType as SystemType
+import constant.Target as Target
 from log.Log import logger
 from exception.BeanCurrentlyInCreationException import BeanCurrentlyInCreationException
 
@@ -9,35 +10,75 @@ class BeanFactory(object):
     """
 
     # 组件类本身的字典 (依赖注入全部完成后清空)
+    # 字典内数据格式如下:
+    # componentClsDict = {
+    #     SystemType.CLIENT: {
+    #         'xxxClientComponent': [ cls, targetNamespace, targetSystemName ],
+    #         ...
+    #     },
+    #     SystemType.SERVER: {
+    #         'xxxServerComponent': [ cls, targetNamespace, targetSystemName ],
+    #         ...
+    #     }
+    # }
     componentClsDict = {
         SystemType.CLIENT: {},
         SystemType.SERVER: {}
     }
+
     # 组件对象字典 (Bean 的容器)
+    # 字典内数据格式如下:
+    # componentObjectDict = {
+    #     SystemType.CLIENT: {
+    #         'xxxClientComponent': object,
+    #         ...
+    #     },
+    #     SystemType.SERVER: {
+    #         'xxxServerComponent': object,
+    #         ...
+    #     }
+    # }
     componentObjectDict = {
         SystemType.CLIENT: {},
         SystemType.SERVER: {}
     }
+
     # 组件对象等待注入的字典 (二级缓存，用于解决循环依赖) (依赖注入全部完成后清空)
+    # 字典内数据格式如下:
+    # componentObjectWaitInjectDict = {
+    #     SystemType.CLIENT: {
+    #         'xxxClientComponent': object,
+    #         ...
+    #     },
+    #     SystemType.SERVER: {
+    #         'xxxServerComponent': object,
+    #         ...
+    #     }
+    # }
     componentObjectWaitInjectDict = {
         SystemType.CLIENT: {},
         SystemType.SERVER: {}
     }
 
     @staticmethod
-    def createBean(system, systemType):
+    def createBean(system, systemType, namespace, systemName):
         """
         创建 Bean 并进行依赖注入
 
         Args:
             system (ClientSystem | ServerSystem): 被注册的客户端或服务端对象
             systemType (str): 系统的类型，请使用常量 SystemType.CLIENT 或 SystemType.SERVER
+            namespace (str): system 的命名空间
+            systemName (str): system 的系统名称
         """
-        for clsName, componentCls in BeanFactory.componentClsDict[systemType].items():
-            BeanFactory.createBeanDfs(componentCls, system, [], systemType)
+        for clsName, componentList in BeanFactory.componentClsDict[systemType].items():
+            # 判断此 cls 是不是要注入此 system
+            if (componentList[1] == namespace or componentList[1] == Target.DEFAULT) and \
+                (componentList[2] == systemName or componentList[2] == Target.DEFAULT):
+                BeanFactory.createBeanDfs(componentList[0], system, [], systemType)
 
     @staticmethod
-    def createBeanWithInit(cls, system, systemType):
+    def createBeanWithInit(cls, system, systemType, namespace, systemName):
         """
         为带有 @Init 的类进行依赖注入，获取所需要的对象并返回
 
@@ -45,6 +86,8 @@ class BeanFactory(object):
             cls (type): 类型本身
             system (ClientSystem | ServerSystem): 被注册的客户端或服务端对象
             systemType (str): 系统的类型，请使用常量 SystemType.CLIENT 或 SystemType.SERVER
+            namespace (str): system 的命名空间
+            systemName (str): system 的系统名称
 
         Returns:
             list: 所需要的对象列表
@@ -61,7 +104,14 @@ class BeanFactory(object):
                         logger.warning("没有找到带有 @InitComponent 的类 %s，将使用 None 进行注入。", args[i][0].upper() + args[i][1:])
                         dependenceList.append(None)
                         continue
-                    dependenceList.append(BeanFactory.createBeanDfs(BeanFactory.componentClsDict[systemType][args[i]], system, [], systemType))
+                    # 判断此 cls 是不是要注入此 system
+                    componentList = BeanFactory.componentClsDict[systemType][args[i]]
+                    if (componentList[1] == namespace or componentList[1] == Target.DEFAULT) and \
+                        (componentList[2] == systemName or componentList[2] == Target.DEFAULT):
+                        dependenceList.append(BeanFactory.createBeanDfs(componentList[0], system, [], systemType))
+                    else:
+                        logger.warning("在 %s 类的 __init__ 方法中，%s 指定的系统不是此类，将使用 None 进行注入。", cls.__name__, args[i][0].upper() + args[i][1:])
+                        dependenceList.append(None)
         return dependenceList
 
     @staticmethod
@@ -111,7 +161,7 @@ class BeanFactory(object):
                         dependenceList.append(None)
                         continue
                     # 递归创建对象
-                    dependenceobj = BeanFactory.createBeanDfs(BeanFactory.componentClsDict[systemType][args[i]], system, nextCreatingClsList, systemType)
+                    dependenceobj = BeanFactory.createBeanDfs(BeanFactory.componentClsDict[systemType][args[i]][0], system, nextCreatingClsList, systemType)
                     dependenceList.append(dependenceobj)
         # 拿到了需要注入的所有对象，创建对象
         obj = cls(*dependenceList)
@@ -141,5 +191,5 @@ class BeanFactory(object):
                     continue
                 setattr(obj, args[i], BeanFactory.componentObjectDict[systemType][args[i]])
         # 依赖注入全部完成，清理不需要的对象
-        BeanFactory.componentClsDict[systemType] = None
-        BeanFactory.componentObjectWaitInjectDict[systemType] = None
+        # BeanFactory.componentClsDict[systemType] = None
+        # BeanFactory.componentObjectWaitInjectDict[systemType] = None

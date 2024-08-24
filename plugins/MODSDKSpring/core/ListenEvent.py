@@ -2,6 +2,7 @@
 import inspect
 import functools
 import constant.SystemType as SystemType
+import constant.Target as Target
 from BeanFactory import BeanFactory
 from Autowired import Autowired
 from Lazy import Lazy
@@ -18,35 +19,55 @@ class ListenEvent(object):
     @staticmethod
     def InitClient(cls):
         """
-        添加在被 modMain.py 注册的客户端类的上方，创建对象时触发
+        添加在被 modMain.py 注册的客户端类的上方，开启框架相关功能
         """
         return ListenEvent.Init(cls, SystemType.CLIENT)
 
     @staticmethod
     def InitServer(cls):
         """
-        添加在被 modMain.py 注册的服务端类的上方，创建对象时触发
+        添加在被 modMain.py 注册的服务端类的上方，开启框架相关功能
         """
         return ListenEvent.Init(cls, SystemType.SERVER)
 
     @staticmethod
-    def InitComponentClient(cls):
+    def InitComponentClient(cls = None, namespace = Target.DEFAULT, systemName = Target.DEFAULT):
         """
-        添加到自定义的客户端 Component 类的上方，创建对象时触发
+        添加到自定义的客户端 Component 类的上方，开启框架相关功能
+
+        Args:
+            namespace (str, optional): 注入的客户端系统的命名空间，当 modMain.py 中只注册了一个客户端时不用填写此参数
+            systemName (str, optional): 注入的客户端系统的系统名称，当 modMain.py 中只注册了一个客户端时不用填写此参数
         """
-        return ListenEvent.InitComponent(cls, SystemType.CLIENT)
+        if cls:
+            return ListenEvent.InitComponent(cls, SystemType.CLIENT, namespace, systemName)
+
+        def wrapper(clazz):
+            return ListenEvent.InitComponent(clazz, SystemType.CLIENT, namespace, systemName)
+
+        return wrapper
 
     @staticmethod
-    def InitComponentServer(cls):
+    def InitComponentServer(cls = None, namespace = Target.DEFAULT, systemName = Target.DEFAULT):
         """
-        添加到自定义的服务端 Component 类的上方，创建对象时触发
+        添加到自定义的服务端 Component 类的上方，开启框架相关功能
+
+        Args:
+            namespace (str, optional): 注入的服务端系统的命名空间，当 modMain.py 中只注册了一个服务端时不用填写此参数
+            systemName (str, optional): 注入的服务端系统的系统名称，当 modMain.py 中只注册了一个服务端时不用填写此参数
         """
-        return ListenEvent.InitComponent(cls, SystemType.SERVER)
+        if cls:
+            return ListenEvent.InitComponent(cls, SystemType.CLIENT, namespace, systemName)
+
+        def wrapper(clazz):
+            ListenEvent.InitComponent(clazz, SystemType.SERVER, namespace, systemName)
+
+        return wrapper
 
     @staticmethod
     def Init(cls, systemType):
         """
-        添加在被 modMain.py 注册的类的上方，创建对象时触发 (不推荐使用)
+        添加在被 modMain.py 注册的类的上方，开启框架相关功能 (不能直接使用)
 
         Args:
             systemType (str): 系统的类型，请使用常量 SystemType.CLIENT 或 SystemType.SERVER
@@ -62,11 +83,11 @@ class ListenEvent(object):
             ListenEvent.listenEvent(cls, self)
 
             # 处理带 @InitComponent 的 Bean 的创建和依赖注入
-            BeanFactory.createBean(self, systemType)
+            BeanFactory.createBean(self, systemType, namespace, systemName)
 
             # 处理当前自己的依赖注入
             dependenceList = [namespace, systemName]
-            dependenceList.extend(BeanFactory.createBeanWithInit(cls, self, systemType))
+            dependenceList.extend(BeanFactory.createBeanWithInit(cls, self, systemType, namespace, systemName))
 
             # 最后一次依赖注入 (解决循环依赖对象的注入)
             BeanFactory.dependenceInjectLast(systemType)
@@ -83,12 +104,14 @@ class ListenEvent(object):
         return cls
 
     @staticmethod
-    def InitComponent(cls, systemType):
+    def InitComponent(cls, systemType, targetNamespace, targetSystemName):
         """
-        添加到自定义的 Component 类的上方，创建对象时触发 (不推荐使用)
+        添加到自定义的 Component 类的上方，开启框架相关功能 (不能直接使用)
 
         Args:
             systemType (str): 系统的类型，请使用常量 SystemType.CLIENT 或 SystemType.SERVER
+            targetNamespace (str): 注入的系统的命名空间，如果值为 Target.DEFAULT 则不判断注入的系统对象的命名空间
+            targetSystemName (str): 注入的系统的系统名称，如果值为 Target.DEFAULT 则不判断注入的系统对象的系统名称
         """
         origInit = cls.__init__
         
@@ -104,7 +127,7 @@ class ListenEvent(object):
         ListenEvent.checkDecorator(origInit, newInit)
 
         cls.__init__ = newInit
-        BeanFactory.componentClsDict[systemType][cls.__name__[0].lower() + cls.__name__[1:]] = cls
+        BeanFactory.componentClsDict[systemType][cls.__name__[0].lower() + cls.__name__[1:]] = [ cls, targetNamespace, targetSystemName ]
         return cls
 
     @staticmethod
