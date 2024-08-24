@@ -1,0 +1,10 @@
+# 忽略 python 编译文件
+*.pyc
+
+# 忽略编辑器目录和文件
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
