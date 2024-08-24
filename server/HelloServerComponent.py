@@ -3,13 +3,12 @@ from plugins.MODSDKSpring.core.ListenEvent import ListenEvent
 from plugins.MODSDKSpring.core.Autowired import Autowired
 from plugins.MODSDKSpring.core.Lazy import Lazy
 
-@ListenEvent.InitComponentClient
-class HelloClientComponent(object):
+@ListenEvent.InitComponentServer
+class HelloServerComponent(object):
 
     @Autowired
-    def __init__(self, client, testClientComponent):
-        self.client = client
-        self.testClientComponent = testClientComponent
+    def __init__(self, server):
+        self.server = server
     
     def helloWorld(self):
         print("Hello World!")

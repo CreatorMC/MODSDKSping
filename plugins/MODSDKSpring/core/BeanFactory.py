@@ -141,5 +141,5 @@ class BeanFactory(object):
                     continue
                 setattr(obj, args[i], BeanFactory.componentObjectDict[systemType][args[i]])
         # 依赖注入全部完成，清理不需要的对象
-        BeanFactory.componentClsDict = None
-        BeanFactory.componentObjectWaitInjectDict = None
+        BeanFactory.componentClsDict[systemType] = None
+        BeanFactory.componentObjectWaitInjectDict[systemType] = None
