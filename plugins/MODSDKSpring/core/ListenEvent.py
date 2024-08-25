@@ -134,7 +134,7 @@ class ListenEvent(object):
         return cls
 
     @staticmethod
-    def Client(eventName, namespace = "namespace", systemName = "systemName", priority = 0):
+    def Client(eventName, namespace = clientApi.GetEngineNamespace(), systemName = clientApi.GetEngineSystemName(), priority = 0):
         """
         客户端监听事件
         Args:
@@ -157,7 +157,7 @@ class ListenEvent(object):
         return register
 
     @staticmethod
-    def Server(eventName, namespace = "namespace", systemName = "systemName", priority = 0):
+    def Server(eventName, namespace = clientApi.GetEngineNamespace(), systemName = clientApi.GetEngineSystemName(), priority = 0):
         """
         服务端监听事件
         Args:
