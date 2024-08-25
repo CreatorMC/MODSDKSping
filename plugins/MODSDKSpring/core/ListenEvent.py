@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import mod.client.extraClientApi as clientApi
+import mod.server.extraServerApi as serverApi
 import inspect
 import functools
 import constant.SystemType as SystemType
@@ -6,10 +8,8 @@ import constant.Target as Target
 from BeanFactory import BeanFactory
 from Autowired import Autowired
 from Lazy import Lazy
-# ClientSystem = clientApi.GetClientSystemCls()
-# ServerSystem = serverApi.GetServerSystemCls()
-ClientSystem = object
-ServerSystem = object
+ClientSystem = clientApi.GetClientSystemCls()
+ServerSystem = serverApi.GetServerSystemCls()
 
 class ListenEvent(object):
     """
@@ -76,8 +76,7 @@ class ListenEvent(object):
         origInit = cls.__init__
 
         def newInit(self, namespace, systemName, *args, **kwargs):
-            # super(cls, self).__init__(namespace, systemName)
-            super(cls, self).__init__()
+            super(cls, self).__init__(namespace, systemName)
 
             # 处理监听
             ListenEvent.listenEvent(cls, self)
@@ -194,8 +193,7 @@ class ListenEvent(object):
         for name, method in members:
             if "eventName" in method.__dict__:
                 if isinstance(system, ClientSystem) or isinstance(system, ServerSystem):
-                    print("Name Space: " + method.namespace + "\nSystem Name: " + method.systemName + "\nListen Event: " + method.eventName + "\nPriority: " + str(method.priority))
-                    # system.ListenForEvent(method.namespace, method.systemName, method.eventName, system, method, method.priority)
+                    system.ListenForEvent(method.namespace, method.systemName, method.eventName, system, method, method.priority)
 
     @staticmethod
     def checkDecorator(origInit, newInit):
