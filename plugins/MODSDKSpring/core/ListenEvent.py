@@ -57,7 +57,7 @@ class ListenEvent(object):
             systemName (str, optional): 注入的服务端系统的系统名称，当 modMain.py 中只注册了一个服务端时不用填写此参数
         """
         if cls:
-            return ListenEvent.InitComponent(cls, SystemType.CLIENT, namespace, systemName)
+            return ListenEvent.InitComponent(cls, SystemType.SERVER, namespace, systemName)
 
         def wrapper(clazz):
             ListenEvent.InitComponent(clazz, SystemType.SERVER, namespace, systemName)
@@ -91,6 +91,9 @@ class ListenEvent(object):
 
             # 最后一次依赖注入 (解决循环依赖对象的注入)
             BeanFactory.dependenceInjectLast(systemType)
+
+            # 清理不需要的变量，以节省内存
+            BeanFactory.clearNoNeedVariable(systemType)
 
             print(cls.__name__ + " system created!")
             # 执行原来的初始化方法
