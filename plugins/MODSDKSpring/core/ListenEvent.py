@@ -5,6 +5,7 @@ import inspect
 import functools
 import constant.SystemType as SystemType
 import constant.Target as Target
+from log.Log import logger
 from BeanFactory import BeanFactory
 from Autowired import Autowired
 from Lazy import Lazy
@@ -94,7 +95,7 @@ class ListenEvent(object):
             # 清理不需要的变量，以节省内存
             BeanFactory.clearNoNeedVariable(systemType)
 
-            print(cls.__name__ + " system created!")
+            logger.info("%s 系统创建成功", cls.__name__)
             # 执行原来的初始化方法
             origInit(self, *dependenceList)
 
@@ -122,7 +123,7 @@ class ListenEvent(object):
             # 处理监听
             ListenEvent.listenEvent(cls, system)
 
-            print(cls.__name__ + " object created!")
+            logger.info("%s 组件创建成功", cls.__name__)
             origInit(self, system, *args, **kwargs)
 
         # 检查装饰器
