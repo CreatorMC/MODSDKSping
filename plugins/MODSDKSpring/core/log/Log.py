@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
 import logging
 
-level = logging.DEBUG
-logger = logging.getLogger('MODSDKSpring')
-logger.setLevel(level)
+class LogAdapter(logging.LoggerAdapter):
+    def process(self, msg, kwargs):
+        return ('[MODSDKSpring] ' + msg, kwargs)
 
-console_handler = logging.StreamHandler()
-console_handler.setLevel(level)
-
-formatter = logging.Formatter('[%(asctime)s][%(levelname)s][%(name)s]%(message)s')
-console_handler.setFormatter(formatter)
-
-logger.addHandler(console_handler)
+# 使用适配器
+logger = LogAdapter(logging.getLogger('MODSDKSpring'), {})
