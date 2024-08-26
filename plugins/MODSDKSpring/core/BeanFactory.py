@@ -233,4 +233,5 @@ class BeanFactory(object):
         """
         for clsName in BeanFactory.componentKeyTempList:
             BeanFactory.componentClsDict[systemType].pop(clsName, None)
+            BeanFactory.componentObjectWaitInjectDict[systemType].pop(clsName, None)
         BeanFactory.componentKeyTempList = []
