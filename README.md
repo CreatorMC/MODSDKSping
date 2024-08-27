@@ -2,7 +2,7 @@
 
 # 什么是 MODSDKSpring
 
-MODSDKSpring 是一个非官方的，由创造者MC制作的，在网易我的世界 MODSDK 基础上开发的框架。目的是为了简化并规范网易我的世界 [MOD](https://mc.163.com/dev/mcmanual/mc-dev/mcguide/20-%E7%8E%A9%E6%B3%95%E5%BC%80%E5%8F%91/13-%E6%A8%A1%E7%BB%84SDK%E7%BC%96%E7%A8%8B/1-Mod%E5%BC%80%E5%8F%91%E7%AE%80%E4%BB%8B/1-Mod%E7%AE%80%E4%BB%8B.html) 的开发。
+MODSDKSpring 是一个非官方的，由魔灵工作室-创造者MC制作的，在网易我的世界 MODSDK 基础上开发的框架。目的是为了简化并规范网易我的世界 [MOD](https://mc.163.com/dev/mcmanual/mc-dev/mcguide/20-%E7%8E%A9%E6%B3%95%E5%BC%80%E5%8F%91/13-%E6%A8%A1%E7%BB%84SDK%E7%BC%96%E7%A8%8B/1-Mod%E5%BC%80%E5%8F%91%E7%AE%80%E4%BB%8B/1-Mod%E7%AE%80%E4%BB%8B.html) 的开发。
 
 # 为什么要用 MODSDKSpring
 
@@ -12,7 +12,11 @@ MODSDKSpring 定义了一系列的装饰器（就像您在 modMain.py 中看到�
 
 上面的描述如果没看懂也没关系，在接下来的快速入门中，您将直观的感受到使用 MODSDKSpring 所带来的便捷。
 
-# 下载
+# Python 版本
+
+因为网易我的世界 MODSDK 使用的是 [python 2.7.18](https://www.python.org/downloads/release/python-2718/)，所以此框架也使用相同的版本。
+
+# 框架下载
 
 ```shell
 pip install mc-creatormc-sdkspring

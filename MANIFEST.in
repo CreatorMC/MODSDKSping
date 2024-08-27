@@ -1,0 +1,2 @@
+recursive-include plugins *.py
+recursive-include template *.py
