@@ -12,7 +12,7 @@ setup(
     install_requires=[],
     entry_points={
         'console_scripts': [
-            'modsdkspring=command.main:main',
+            'modsdkspring=modsdkspring.main:main',
         ],
     },
     include_package_data=True,
