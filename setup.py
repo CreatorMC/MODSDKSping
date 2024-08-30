@@ -8,9 +8,7 @@ setup(
     long_description=open('README.md').read(),
     author='CreatorMC',
     url='https://github.com/CreatorMC/MODSDKSping',
-    packages=find_packages(
-        exclude=['plugins', 'plugins.*', 'template', 'template.*']
-    ),
+    packages=find_packages(),
     install_requires=[],
     entry_points={
         'console_scripts': [
