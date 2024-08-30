@@ -69,4 +69,4 @@ def initMOD():
                     f.write(fstr)
             
             # 修改文件扩展名
-            os.rename(filePath, file[:file.rfind('.')] + '.py')
+            os.rename(filePath, os.path.join(root, file[:file.rfind('.')] + '.py'))
