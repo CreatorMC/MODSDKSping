@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import mod.client.extraClientApi as clientApi
-from plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+from [MOD_DIR_NAME].plugins.MODSDKSpring.core.ListenEvent import ListenEvent
 ClientSystem = clientApi.GetClientSystemCls()
 compFactory = clientApi.GetEngineCompFactory()
 
@@ -9,7 +9,7 @@ compFactory = clientApi.GetEngineCompFactory()
 class [CLIENT_SYSTEM_NAME](ClientSystem):
 
     def __init__(self, namespace, systemName):
-        super([CLIENT_SYSTEM_NAME], self).__init__(namespace, systemName)
+        pass
 
     def Destroy(self):
         self.UnListenAllEvents()

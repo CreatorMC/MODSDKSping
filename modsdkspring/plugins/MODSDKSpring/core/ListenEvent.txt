@@ -80,7 +80,7 @@ class ListenEvent(object):
             super(cls, self).__init__(namespace, systemName)
 
             # 处理监听
-            ListenEvent.listenEvent(cls, self)
+            ListenEvent.listenEvent(cls, self, self)
 
             # 处理带 @InitComponent 的 Bean 的创建和依赖注入
             BeanFactory.createBean(self, systemType, namespace, systemName)
@@ -121,7 +121,7 @@ class ListenEvent(object):
         def newInit(self, system, *args, **kwargs):
 
             # 处理监听
-            ListenEvent.listenEvent(cls, system)
+            ListenEvent.listenEvent(cls, system, self)
 
             logger.info("%s 组件创建成功", cls.__name__)
             origInit(self, system, *args, **kwargs)
@@ -182,19 +182,20 @@ class ListenEvent(object):
 # region 功能方法，使用者不应该显式调用此部分！
 
     @staticmethod
-    def listenEvent(cls, system):
+    def listenEvent(cls, system, component):
         """
         处理监听
 
         Args:
             cls (type): 要监听的类型本身
             system (ClientSystem | ServerSystem): 被注册的客户端或服务端对象
+            component (object): 客户端或服务端组件对象
         """
         members = inspect.getmembers(cls, predicate=inspect.ismethod)
         for name, method in members:
             if "eventName" in method.__dict__:
                 if isinstance(system, ClientSystem) or isinstance(system, ServerSystem):
-                    system.ListenForEvent(method.namespace, method.systemName, method.eventName, system, method, method.priority)
+                    system.ListenForEvent(method.namespace, method.systemName, method.eventName, component, method, method.priority)
 
     @staticmethod
     def checkDecorator(origInit, newInit):

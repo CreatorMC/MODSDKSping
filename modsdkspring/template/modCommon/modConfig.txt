@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Mod Version
-MOD_NAME = "[MOD_NAME]"
+MOD_NAMESPACE = "[MOD_NAME]"
 MOD_VERSION = "0.0.1"
 
 # Client System
