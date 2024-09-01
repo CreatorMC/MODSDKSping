@@ -75,6 +75,8 @@ class ListenEvent(object):
         """
         # 记录原本的构造方法
         origInit = cls.__init__
+        # 记录原本的 Destroy 方法
+        origDestroy = cls.Destroy
 
         def newInit(self, namespace, systemName, *args, **kwargs):
             super(cls, self).__init__(namespace, systemName)
@@ -99,11 +101,16 @@ class ListenEvent(object):
             # 执行原来的初始化方法
             origInit(self, *dependenceList)
 
+        def newDestroy(self):
+            self.UnListenAllEvents()
+            origDestroy(self)
+
         # 检查装饰器
         ListenEvent.checkDecorator(origInit, newInit)
 
         # 用新的方法覆盖原来的方法
         cls.__init__ = newInit
+        cls.Destroy = newDestroy
         return cls
 
     @staticmethod

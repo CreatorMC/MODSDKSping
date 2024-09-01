@@ -10,6 +10,3 @@ class [CLIENT_SYSTEM_NAME](ClientSystem):
 
     def __init__(self, namespace, systemName):
         pass
-
-    def Destroy(self):
-        self.UnListenAllEvents()
