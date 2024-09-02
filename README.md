@@ -294,7 +294,7 @@ pip2 install mc-creatormc-sdkspring
 
       这是 MODSDKSpring 框架提供的一个装饰器，只能添加到**服务端类或组件**的方法上。它代替了 self.ListenForEvent，表示此方法要监听的事件，事件的回调方法即是此方法。
 
-      其中 `eventName` 表示要监听的事件的名称。除了监听 MODSDK 提供的事件，它还可以监听其他系统发送的自定义事件，详见装饰器文档部分。
+      其中 `eventName` 表示要监听的事件的名称。除了监听 MODSDK 提供的事件，它还可以监听其他系统发送的自定义事件，详见 [监听自定义事件]() 部分。
 
       类似的还有 @ListenEvent.Client。
     
@@ -469,6 +469,52 @@ pip2 install mc-creatormc-sdkspring
       此装饰器还能具体指定该服务端组件属于哪个服务端，即组件的 `__init__` 方法中的参数 `server` 具体是哪个服务端系统。如果您在 `modMain.py` 中只注册了一个服务端，那么此处无需指定该组件属于哪个服务端。具体如何指定，详见装饰器文档部分。
 
       类似的还有 @ListenEvent.InitComponentClient。
+
+# 监听自定义事件
+
+> 此部分不需要您跟着步骤一步步操作。
+
+在实际开发中，我们经常会自定义事件，以此来进行客户端与服务端之间的相互通信。MODSDKSpring 也提供了监听自定义事件的方法。
+
+- @ListenEvent.Client
+
+    用于**客户端系统/组件**监听事件，只能添加到**客户端系统/组件**的方法上方。
+
+    其拥有四个参数，参数名及含义如下：
+
+    - eventName (str): 监听的事件名称。
+    - namespace (str, 可选): 所监听事件的来源系统的 namespace。默认值为 clientApi.GetEngineNamespace()。
+    - systemName (str, 可选): 所监听事件的来源系统的 systemName。默认值为 clientApi.GetEngineSystemName()。
+    - priority (int, 可选): 回调函数的优先级。默认值为 0，这个数值越大表示被执行的优先级越高，最高为10。
+
+- @ListenEvent.Server
+
+    用于**服务端系统/组件**监听事件，只能添加到**服务端系统/组件**的方法上方。
+
+    其拥有四个参数，参数名及含义如下：
+
+    - eventName (str): 监听的事件名称。
+    - namespace (str, 可选): 所监听事件的来源系统的 namespace。默认值为 clientApi.GetEngineNamespace()。
+    - systemName (str, 可选): 所监听事件的来源系统的 systemName。默认值为 clientApi.GetEngineSystemName()。
+    - priority (int, 可选): 回调函数的优先级。默认值为 0，这个数值越大表示被执行的优先级越高，最高为10。
+
+客户端系统/组件监听自定义事件的方式如下：
+
+```python
+@ListenEvent.Client(namespace=modConfig.MOD_NAMESPACE, systemName=modConfig.SERVER_SYSTEM_NAME, eventName="DamageEventToClient")
+def damageEvent(self, event):
+    pass
+```
+
+客户端系统/组件同理，只是替换为 `@ListenEvent.Server`。
+
+在 [ParticleMod]() 示例中，客户端组件 `HurtEntityClientComponent.py` 监听了服务端组件 `HurtEntityServerComponent.py` 发出的自定义事件 `DamageEventToClient`。您可以下载此示例，查看具体代码。
+
+# 跨组件调用（依赖注入）
+
+# 解决循环依赖
+
+# 可能遇到的问题及解决方案
 
 # 装饰器文档
 
