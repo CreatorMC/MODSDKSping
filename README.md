@@ -82,6 +82,8 @@ pip2 install mc-creatormc-sdkspring
 
     如果您的电脑是 Windows 系统，在 `TutorialMod/tutorialBehaviorPack` 文件夹内的地址栏上输入 `cmd` 并按下 `Enter` 键，即可在当前位置打开一个命令行窗口。
 
+    ![打开命令行窗口截图](https://github.com/user-attachments/assets/e109fa00-b301-47ed-a575-74043327ed54)
+
     接着输入以下命令：
 
     ```shell
@@ -447,6 +449,12 @@ pip2 install mc-creatormc-sdkspring
             pass
 
     ```
+
+    需要特别注意的是，因为网易我的世界限制了 python 的 `os` 模块，MODSDKSpring 框架无法通过路径扫描自动导入所需要的组件，所以您必须在 `TutorialServerSystem.py` 文件中手动导入需要的服务端组件，即 `from tutorialComponentScripts.components.server.ChatServerComponent import ChatServerComponent`。
+
+    同理，如果您创建客户端组件，也需要在客户端系统文件中手动导入需要的客户端组件。
+
+    **通常情况下，这是您的组件不生效的首要原因，请务必牢记！**
 
 5. 运行
 
