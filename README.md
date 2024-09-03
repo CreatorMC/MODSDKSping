@@ -601,9 +601,49 @@ class HurtEntityClientComponent(object):
     BeanFactory.getBean(SystemType.CLIENT, 'testComponentClient')
     ```
 
-该方法适用于在注册了多个客户端系统或服务端系统的情况下，某个系统的组件要调用另外一个系统的组件时使用。一般情况下，请使用 `@Autowired`。
+> 该方法适用于在注册了多个客户端系统或服务端系统的情况下，某个系统的组件要调用另外一个系统的组件时使用。一般情况下，请使用 `@Autowired`。
+
+> 该方法不会产生循环依赖问题。
+
+> 永远不要在 `__init__` 方法中使用 `getBean()`，因为此时您需要的组件可能尚未创建。
 
 # 解决循环依赖
+
+设想这样一个场景，您有一个组件 `A`，还有一个组件 `B`。您想在组件 `A` 中调用组件 `B` 的方法，同时，您也想在组件 `B` 中调用组件 `A` 中的方法。这两个组件都想调用对方，就形成了所谓的循环依赖。
+
+从代码逻辑上讲，当组件 `A` 被创建时，框架发现组件 `A` 需要一个组件 `B`，于是就先去创建组件 `B` 的对象。但是在创建组件 `B` 时，框架又发现组件 `B` 需要组件 `A`，于是又去创建组件 `A` 的对象，这就形成了一个循环。如果不做任何处理，最终会因为递归层数过多，抛出异常。
+
+MODSDKSpring 框架目前提供了两种解决循环依赖的方法。一种是在需要调用另一个组件的地方，手动调用 `getBean()` 方法。需要注意的是，不要在 `__init__` 方法中使用 `getBean()`。
+
+另外一种方法，是使用装饰器 `@Lazy`。这种方法应该是您的首选。
+
+## 使用 @Lazy
+
+假设组件 `A` 和 `B` 之间存在循环依赖，那么您只需要在 `A` 或者 `B` 中的 `__init__` 方法上的 `@Autowired` 上面添加 `@Lazy` 即可。注意，是 `A` 或者 `B`，在其中一个类的 `@Autowired` 上面加就行！
+
+添加了 `@Lazy` 的 `__init__` 方法，会在创建对象时先用 `None` 填充方法内的组件的变量。在 `__init__` 方法执行完成，所有组件被创建之后，会再次执行依赖注入，给对象中的组件的变量赋值（如下方代码中的 `self.b`）。示例代码如下。
+
+```python
+# -*- coding: utf-8 -*-
+from particleModScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+from particleModScripts.plugins.MODSDKSpring.core.Autowired import Autowired
+from particleModScripts.plugins.MODSDKSpring.core.Lazy import Lazy
+from particleModScripts.modCommon import modConfig
+from particleModScripts.modCommon import eventConfig
+
+@ListenEvent.InitComponentClient
+class A(object):
+
+    @Lazy
+    @Autowired
+    def __init__(self, client, b):
+        self.client = client
+        self.b = b # self.b 的值此时为 None，所有组件创建完成后，框架会自动为 self.b 赋值。
+```
+
+> `@Lazy` 只能写在 `@Autowired` 的上方！如果写在 `@Autowired` 下方，您会在网易我的世界开发者启动器的日志窗口中看到 `@Lazy 必须添加在 @Autowired 的上方。` 的异常提示。
+
+> `@Lazy` 不能用于**客户端/服务端类**的 `__init__` 方法上（这里指的是客户端或服务端系统，不是组件）。请您遵循良好的设计规范，如果您需要在组件中调用系统的方法，组件的 `__init__` 方法中的第二个参数（即，`__init__(self, server)` 中的 `server` 或 `__init__(self, client)` 中的 `client`），会传入此组件所属的客户端/服务端系统对象。
 
 # 高级内容
 
