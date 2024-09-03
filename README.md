@@ -404,6 +404,10 @@ pip2 install mc-creatormc-sdkspring
 
     创建组件时，无论是客户端组件还是服务端组件，都需要继承自 `object` 类，即上方代码中的 `class ChatServerComponent(object):`。
 
+    组件的 `__init__` 方法中的参数，必须有第二个变量（即上方代码中的 `__init__(self, server)` 中的 `server` 变量）。
+
+    如果是客户端组件，`__init__` 方法一般写为 `__init__(self, client)`。
+
     如果创建的是**服务端组件**，需要在类的上方添加 `@ListenEvent.InitComponentServer` 装饰器。
 
     如果创建的是**客户端组件**，需要在类的上方添加 `@ListenEvent.InitComponentClient` 装饰器。
@@ -539,7 +543,7 @@ MODSDKSpring 框架可以管理上述的依赖关系。具体做法是，框架�
 
 假设，有一个客户端组件 `HurtEntityClientComponent`，需要使用另一个客户端组件 `ParticleClientComponent`。
 
-首先，在 `HurtEntityClientComponent` 的 `__init__` 方法的参数上，添加一个变量，名字为 `particleClientComponent`（对应组件类名的首字母小写，名字不能变！）
+首先，在 `HurtEntityClientComponent` 的 `__init__` 方法的参数上，添加一个变量，名字为 `particleClientComponent`（对应组件类名的首字母小写，**名字不能变！**）。如果您有更多需要调用的组件，在 `__init__` 方法的参数中，可以继续添加更多类似形式的变量。
 
 然后，在 `__init__` 方法的上方添加一个装饰器 `@Autowired`，开启依赖注入。
 
@@ -571,6 +575,8 @@ class HurtEntityClientComponent(object):
 
 至于循环依赖是什么情况，请查看 [解决循环依赖](https://github.com/CreatorMC/MODSDKSping?tab=readme-ov-file#%E8%A7%A3%E5%86%B3%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96) 部分。
 
+> `@Autowired` 也可以被添加到**客户端/服务端系统**的 `__init__` 方法上方，但通常情况下，您不应该这么做。
+
 ## getBean() 方法
 
 方法在 `xxx.plugins.MODSDKSpring.core.BeanFactory` 中，`xxx` 应替换为您的行为包中的 Mod 文件夹名称，如 `tutorialScripts`。
@@ -590,7 +596,7 @@ class HurtEntityClientComponent(object):
 
     |数据类型|说明|
     |-------|----|
-    |object \| None|返回容器中的组件<br>如果组件不存在，则返回 None|
+    |object \| None|返回容器中的组件对象<br>如果组件不存在，则返回 None|
 
 - 示例
 
@@ -598,7 +604,7 @@ class HurtEntityClientComponent(object):
     from tutorialScripts.plugins.MODSDKSpring.core.BeanFactory import BeanFactory
     import tutorialScripts.plugins.MODSDKSpring.core.constant.SystemType as SystemType
 
-    BeanFactory.getBean(SystemType.CLIENT, 'testComponentClient')
+    testComponentClient = BeanFactory.getBean(SystemType.CLIENT, 'testComponentClient')
     ```
 
 > 该方法适用于在注册了多个客户端系统或服务端系统的情况下，某个系统的组件要调用另外一个系统的组件时使用。一般情况下，请使用 `@Autowired`。
