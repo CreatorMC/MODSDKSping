@@ -282,7 +282,7 @@ pip2 install mc-creatormc-sdkspring
 
 5. 代码解释
 
-    针对 MODSDKSpring，解释上一步骤中的代码。对于新增装饰器的详细说明，可以查看此文档中的 [装饰器文档](https://github.com/CreatorMC/MODSDKSping/tree/main?tab=readme-ov-file#) 部分。
+    针对 MODSDKSpring，解释上一步骤中的代码。对于新增装饰器的详细说明，可以查看此文档中的 [装饰器文档](https://github.com/CreatorMC/MODSDKSping?tab=readme-ov-file#%E8%A3%85%E9%A5%B0%E5%99%A8%E6%96%87%E6%A1%A3) 部分。
 
     - @ListenEvent.InitServer 是什么？
 
@@ -294,7 +294,7 @@ pip2 install mc-creatormc-sdkspring
 
       这是 MODSDKSpring 框架提供的一个装饰器，只能添加到**服务端类或组件**的方法上。它代替了 self.ListenForEvent，表示此方法要监听的事件，事件的回调方法即是此方法。
 
-      其中 `eventName` 表示要监听的事件的名称。除了监听 MODSDK 提供的事件，它还可以监听其他系统发送的自定义事件，详见 [监听自定义事件]() 部分。
+      其中 `eventName` 表示要监听的事件的名称。除了监听 MODSDK 提供的事件，它还可以监听其他系统发送的自定义事件，详见 [监听自定义事件](https://github.com/CreatorMC/MODSDKSping?tab=readme-ov-file#%E7%9B%91%E5%90%AC%E8%87%AA%E5%AE%9A%E4%B9%89%E4%BA%8B%E4%BB%B6) 部分。
 
       类似的还有 @ListenEvent.Client。
     
@@ -472,8 +472,6 @@ pip2 install mc-creatormc-sdkspring
 
 # 监听自定义事件
 
-> 此部分不需要您跟着步骤一步步操作。
-
 在实际开发中，我们经常会自定义事件，以此来进行客户端与服务端之间的相互通信。MODSDKSpring 也提供了监听自定义事件的方法。
 
 - @ListenEvent.Client
@@ -506,13 +504,88 @@ def damageEvent(self, event):
     pass
 ```
 
-客户端系统/组件同理，只是替换为 `@ListenEvent.Server`。
+服务端系统/组件同理，只是替换为 `@ListenEvent.Server`。
 
 在 [ParticleMod]() 示例中，客户端组件 `HurtEntityClientComponent.py` 监听了服务端组件 `HurtEntityServerComponent.py` 发出的自定义事件 `DamageEventToClient`。您可以下载此示例，查看具体代码。
 
 # 跨组件调用（依赖注入）
 
+设想这样一个场景，您定义了一个专门用于播放粒子的客户端组件 `P`。您有另一个客户端组件 `A`。您想实现在客户端组件 `A` 中调用客户端组件 `P` 中的方法。这时候应该怎么办呢？
+
+要想实现在 `A` 中调用 `P` 的方法，`A` 必须获取到 `P` 的对象，然后执行 `P.xxx()` 这样的语句。`A` 和 `P` 的这种关系，我们可以称为 `A` 依赖于 `P`。即，`P` 是 `A` 的依赖。
+
+MODSDKSpring 框架可以管理上述的依赖关系。具体做法是，框架会在组件被创建时，将组件的对象放入“容器”（实际上就是一个字典）当中。当组件 `A` 需要另一个组件 `P` 时，框架可以从容器中拿到 `P`，并把 `P` 通过**某种方式**传递给 `A`。
+
+这样，`A` 便可以调用 `P` 的方法，并且不会产生 `P` 这个类的新对象。实现了组件的单例模式，节约内存。
+
+那么，**某种方式**具体是什么？MODSDKSpring 框架目前提供了两种从容器中获取组件对象的方法。这两种方法有它们各自的使用场景，具体细节请继续阅读。
+
+## 组件类的对象在容器中的存储形式
+
+所谓的容器，实际上就是一个 `dict` 类型的变量！千万不要想的太复杂，我不喜欢玩文字游戏，希望您也一样。
+
+假设，有一个客户端组件类，类名是 `HurtEntityClientComponent`。当此类在框架中创建对象后，框架会给它起一个“名字”，叫做 `hurtEntityClientComponent`（类名首字母小写）。这个“名字”是容器中的 `key`，而这个 `key` 对应的 `value` 就是类 `HurtEntityClientComponent` 的对象！形式如下。
+
+```python
+{
+    'hurtEntityClientComponent': HurtEntityClientComponent()
+    # ...
+}
+```
+
+了解了这些，您可以更好的理解下方的从容器中获取组件对象的方法。
+
+## 构造方法注入
+
+假设，有一个客户端组件 `HurtEntityClientComponent`，需要使用另一个客户端组件 `ParticleClientComponent`。
+
+首先，在 `HurtEntityClientComponent` 的 `__init__` 方法的参数上，添加一个变量，名字为 `particleClientComponent`（对应组件类名的首字母小写，名字不能变！）
+
+然后，在 `__init__` 方法的上方添加一个装饰器 `@Autowired`，开启依赖注入。
+
+最后，框架会自动在 `HurtEntityClientComponent` 类的对象被创建时，通过 `__init__` 方法的参数，传入对应的 `ParticleClientComponent` 类的对象。
+
+示例代码如下：
+
+```python
+# -*- coding: utf-8 -*-
+from particleModScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+from particleModScripts.plugins.MODSDKSpring.core.Autowired import Autowired
+from particleModScripts.modCommon import modConfig
+from particleModScripts.modCommon import eventConfig
+
+@ListenEvent.InitComponentClient
+class HurtEntityClientComponent(object):
+
+    @Autowired
+    def __init__(self, client, particleClientComponent):
+        self.client = client
+        self.particleClientComponent = particleClientComponent
+```
+
+上述代码来源于 example 分支中的 [ParticleMod]() 示例，您可以自行下载查看。
+
+注意，在 `__init__` 方法中，变量 `particleClientComponent` 不总是有值。如果有循环依赖的情况，可能变量 `particleClientComponent` 在执行完 `__init__` 方法后，才被赋值，所以变量 `particleClientComponent` 在 `__init__` 方法中可能为 `None`。
+
+因此，我建议您永远不要在 `__init__` 方法中调用其他组件的方法！`__init__` 方法应该只做赋值操作！
+
+至于循环依赖是什么情况，请查看 [解决循环依赖](https://github.com/CreatorMC/MODSDKSping?tab=readme-ov-file#%E8%A7%A3%E5%86%B3%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96) 部分。
+
+## getBean() 方法
+
+
+
 # 解决循环依赖
+
+# 高级内容
+
+> 对您来说，这部分的内容是不必要的。但如果您了解了这些高级内容，可能在某些场景下会帮助您更方便的使用框架。
+
+## 在 modMain.py 中创建多个客户端和服务端的情况
+
+## 自定义 Mod 生成模板（未来可能的功能）
+
+实际上，现在已经能自定义生成模板了，只是模板被内置在框架当中，没有提供对外的标准方法。感兴趣的开发者，可以阅读相关源码，自行探索自定义生成模板的方法。或者，欢迎您对本框架的代码做出贡献！
 
 # 可能遇到的问题及解决方案
 

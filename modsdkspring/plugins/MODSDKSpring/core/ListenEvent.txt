@@ -79,7 +79,10 @@ class ListenEvent(object):
         origDestroy = cls.Destroy
 
         def newInit(self, namespace, systemName, *args, **kwargs):
-            super(cls, self).__init__(namespace, systemName)
+            if isinstance(self, ServerSystem):
+                ServerSystem.__init__(self, namespace, systemName)
+            elif isinstance(self, ClientSystem):
+                ClientSystem.__init__(self, namespace, systemName)
 
             # 处理监听
             ListenEvent.listenEvent(cls, self, self)
