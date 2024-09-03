@@ -573,7 +573,35 @@ class HurtEntityClientComponent(object):
 
 ## getBean() 方法
 
+方法在 `xxx.plugins.MODSDKSpring.core.BeanFactory` 中，`xxx` 应替换为您的行为包中的 Mod 文件夹名称，如 `tutorialScripts`。
 
+- 描述
+
+    该方法能够直接从容器中获取组件对象。
+
+- 参数
+
+    |参数名|数据类型|说明|
+    |-----|--------|----|
+    |systemType|str|想要获取的组件的类型<br>值为 `SystemType.CLIENT` 或 `SystemType.SERVER`<br>`SystemType` 在 `xxx.plugins.MODSDKSpring.core.constant.SystemType` 中|
+    |beanName|str|存放组件的容器的 `key`<br>即类名首字母小写，比如你有一个类名为 `TestComponentClient` 的组件，那么它的 `key` 为 `testComponentClient`|
+
+- 返回值
+
+    |数据类型|说明|
+    |-------|----|
+    |object \| None|返回容器中的组件<br>如果组件不存在，则返回 None|
+
+- 示例
+
+    ```python
+    from tutorialScripts.plugins.MODSDKSpring.core.BeanFactory import BeanFactory
+    import tutorialScripts.plugins.MODSDKSpring.core.constant.SystemType as SystemType
+
+    BeanFactory.getBean(SystemType.CLIENT, 'testComponentClient')
+    ```
+
+该方法适用于在注册了多个客户端系统或服务端系统的情况下，某个系统的组件要调用另外一个系统的组件时使用。一般情况下，请使用 `@Autowired`。
 
 # 解决循环依赖
 
