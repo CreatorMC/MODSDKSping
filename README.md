@@ -734,7 +734,30 @@ from tutorialScripts.components.server import *
 
 ### 自动生成所需的 \_\_init\_\_.py 文件
 
+打开您的命令行窗口，或者在您的代码编辑器中打开一个终端。然后将当前位置切换到 `.../components/client` 或 `.../components/server` 文件夹下。输入下方命令：
 
+```shell
+modsdkspring import
+```
+
+正常的话，您应该会看到以下输出：
+
+```shell
+Starting to create the __init__.py file.
+Successfully created the __init__.py file!
+```
+
+然后在 `.../components/client` 或 `.../components/server` 文件夹内，就会自动生成一个 `__init__.py` 文件。其中导入了此文件夹及其子文件夹内所有的类。
+
+很多时候，您在代码编辑器中打开一个终端，可能终端所在的默认位置并不是 `.../components/client` 或 `.../components/server`，并且您也不想手动切换位置。这时候，您可以使用 `modsdkspring import` 命令提供的参数 `--path`，指定路径。具体示例如下：
+
+```shell
+modsdkspring import --path "tutorialBehaviorPack/tutorialScripts/components/client"
+```
+
+上面的命令假设终端的当前位置在 `TutorialMod` 中。命令执行后，会在您指定的路径中生成一个 `__init__.py` 文件。
+
+### 将命令配置为 Visual Studio Code 任务
 
 ## 在 modMain.py 中创建多个客户端和服务端的情况
 

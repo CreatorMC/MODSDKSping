@@ -18,7 +18,7 @@ def main():
             initMOD()
             print("Created successfully!")
         elif sys.argv[1] == 'import':
-            print("Starting to create the __init__.py file")
+            print("Starting to create the __init__.py file.")
             initPy(sys.argv)
         else:
             print("Incorrect sub command.")
