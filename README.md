@@ -460,7 +460,7 @@ pip2 install mc-creatormc-sdkspring
 
     **通常情况下，这是您的组件不生效的首要原因，请务必牢记！**
 
-    > 有一种更加方便的导入组件的方式，并且 MODSDKSpring 框架提供了类似于 `modsdkspring init` 一样的控制台命令。强烈建议您阅读高级内容中的 [快速导入组件]() 部分。
+    > 有一种更加方便的导入组件的方式，并且 MODSDKSpring 框架提供了类似于 `modsdkspring init` 一样的控制台命令。强烈建议您阅读高级内容中的 [快速导入组件](https://github.com/CreatorMC/MODSDKSping?tab=readme-ov-file#%E5%BF%AB%E9%80%9F%E5%AF%BC%E5%85%A5%E7%BB%84%E4%BB%B6) 部分。
 
 5. 运行
 
@@ -660,6 +660,81 @@ class A(object):
 > 对您来说，这部分的内容不是使用框架所必须看的。但如果您了解了这些高级内容，可能在某些场景下会帮助您更方便的使用框架。
 
 ## 快速导入组件
+
+假设您的 Addon 文件结构如下：
+
+```txt
+TutorialMod
+└── tutorialBehaviorPack
+    ├── entities
+    ├── tutorialScripts
+    │   ├── components
+    │   │   ├── client
+    │   │   │   ├── __init__.py
+    │   │   │   ├── AClientComponent.py
+    │   │   │   ├── BClientComponent.py
+    │   │   │   └── CClientComponent.py
+    │   │   ├── server
+    │   │   │   ├── __init__.py
+    │   │   │   ├── AServerComponent.py
+    │   │   │   ├── BServerComponent.py
+    │   │   │   └── CServerComponent.py
+    │   │   └── __init__.py
+    │   ├── modCommon
+    │   │   ├── __init__.py
+    │   │   └── modConfig.py
+    │   ├── plugins
+    │   │   ├── MODSDKSpring
+    │   │   │   └── ...
+    │   │   └── __init__.py
+    │   ├── __init__.py
+    │   ├── modMain.py
+    │   ├── TutorialClientSystem.py
+    │   └── TutorialServerSystem.py
+    └── manifest.json
+```
+
+在 `TutorialMod/tutorialBehaviorPack/tutorialScripts/components/client/__init__.py` 文件中编写如下代码：
+
+```python
+# 此处假设模块名和模块中定义的类名相同，请根据您的实际情况进行导入
+from AClientComponent import AClientComponent
+from BClientComponent import BClientComponent
+from CClientComponent import CClientComponent
+```
+
+在 `TutorialMod/tutorialBehaviorPack/tutorialScripts/components/server/__init__.py` 文件中编写如下代码：
+
+```python
+# 此处假设模块名和模块中定义的类名相同，请根据您的实际情况进行导入
+from AServerComponent import AServerComponent
+from BServerComponent import BServerComponent
+from CServerComponent import CServerComponent
+```
+
+在 `TutorialMod/tutorialBehaviorPack/tutorialScripts/TutorialClientSystem.py` 文件顶部添加如下代码：
+
+```python
+# 忽略其他代码...
+from tutorialScripts.components.client import *
+# 忽略其他代码...
+```
+
+在 `TutorialMod/tutorialBehaviorPack/tutorialScripts/TutorialServerSystem.py` 文件顶部添加如下代码：
+
+```python
+# 忽略其他代码...
+from tutorialScripts.components.server import *
+# 忽略其他代码...
+```
+
+这样，每当您增加或删除组件时，不需要改动 `TutorialClientSystem.py` 和 `TutorialServerSystem.py` 文件，只需要改动 `client` 和 `server` 文件夹内的 `__init__.py` 文件即可。
+
+您可能还是觉得很麻烦，还是要手动修改文件，称不上“快速”。针对这点，MODSDKSpring 提供了一个控制台命令，能够自动生成上述的 `__init__.py` 文件。
+
+### 自动生成所需的 \_\_init\_\_.py 文件
+
+
 
 ## 在 modMain.py 中创建多个客户端和服务端的情况
 

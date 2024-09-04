@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import re
 import sys
 import os
 import shutil
@@ -16,6 +17,9 @@ def main():
             print("Start initializing your Mod...")
             initMOD()
             print("Created successfully!")
+        elif sys.argv[1] == 'import':
+            print("Starting to create the __init__.py file")
+            initPy(sys.argv)
         else:
             print("Incorrect sub command.")
     else:
@@ -70,3 +74,49 @@ def initMOD():
             
             # 修改文件扩展名
             os.rename(filePath, os.path.join(root, file[:file.rfind('.')] + '.py'))
+
+def initPy(args):
+    """
+    自动生成 __init__.py 文件，其中会自动 import 当前文件夹及其子文件夹中所有的类
+
+    Args:
+        args (list): 命令参数列表
+    """
+    # 要生成 __init__.py 文件的位置
+    path = ""
+    if len(args) == 2:
+        # 取当前路径
+        path = os.getcwd()
+    elif len(args) == 4 and args[2] == '--path':
+        # 取 --path 后的路径
+        path = args[3]
+    else:
+        print("Usage: modsdkspring import --path \"path_to_directory\"")
+        return
+    
+    pattern = r'class\s+([a-zA-Z][a-zA-Z0-9_]*)(\(.*\))?\s*:'
+    pathRootDir = path[path.rfind(os.sep) + 1:]
+    content = ""
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            # 过滤掉不是以 .py 结尾的文件，或者以 '_' 开头的文件
+            if not file.endswith('.py') or file.startswith('_'):
+                continue
+            filePath = os.path.join(root, file)
+            with open(filePath, 'r') as f:
+                fstr = f.read()
+            matches = re.findall(pattern, fstr)
+            # 去掉扩展名 '.py'
+            tempModulePath = filePath[:-3]
+            # 去掉盘符
+            tempModulePath = tempModulePath.split(":" + os.sep, 1)[1] if (":" + os.sep) in tempModulePath else tempModulePath
+            # 去掉多余路径
+            tempModulePath = tempModulePath[tempModulePath.find(pathRootDir + os.sep) + len(pathRootDir + os.sep):]
+            # 将路径分隔符替换为 '.'
+            tempModulePath = tempModulePath.replace(os.sep, '.')
+            for className, superClassName in matches:
+                content += ('from {} import {}\n'.format(tempModulePath, className))
+    
+    with open(os.path.join(path, '__init__.py'), 'w') as f:
+        f.write(content)
+    print("Successfully created the __init__.py file!")
