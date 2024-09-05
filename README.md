@@ -697,6 +697,7 @@ TutorialMod
 在 `TutorialMod/tutorialBehaviorPack/tutorialScripts/components/client/__init__.py` 文件中编写如下代码：
 
 ```python
+# -*- coding: utf-8 -*-
 # 此处假设模块名和模块中定义的类名相同，请根据您的实际情况进行导入
 from AClientComponent import AClientComponent
 from BClientComponent import BClientComponent
@@ -706,6 +707,7 @@ from CClientComponent import CClientComponent
 在 `TutorialMod/tutorialBehaviorPack/tutorialScripts/components/server/__init__.py` 文件中编写如下代码：
 
 ```python
+# -*- coding: utf-8 -*-
 # 此处假设模块名和模块中定义的类名相同，请根据您的实际情况进行导入
 from AServerComponent import AServerComponent
 from BServerComponent import BServerComponent
@@ -715,17 +717,13 @@ from CServerComponent import CServerComponent
 在 `TutorialMod/tutorialBehaviorPack/tutorialScripts/TutorialClientSystem.py` 文件顶部添加如下代码：
 
 ```python
-# 忽略其他代码...
 from tutorialScripts.components.client import *
-# 忽略其他代码...
 ```
 
 在 `TutorialMod/tutorialBehaviorPack/tutorialScripts/TutorialServerSystem.py` 文件顶部添加如下代码：
 
 ```python
-# 忽略其他代码...
 from tutorialScripts.components.server import *
-# 忽略其他代码...
 ```
 
 这样，每当您增加或删除组件时，不需要改动 `TutorialClientSystem.py` 和 `TutorialServerSystem.py` 文件，只需要改动 `client` 和 `server` 文件夹内的 `__init__.py` 文件即可。
@@ -747,7 +745,7 @@ Starting to create the __init__.py file.
 Successfully created the __init__.py file!
 ```
 
-然后在 `.../components/client` 或 `.../components/server` 文件夹内，就会自动生成一个 `__init__.py` 文件。其中导入了此文件夹及其子文件夹内所有的类。
+然后在 `.../components/client` 或 `.../components/server` 文件夹内，就会自动生成一个 `__init__.py` 文件（如果此文件已存在，会自动覆盖文件中的内容）。其中导入了此文件夹及其子文件夹内所有的类。
 
 很多时候，您在代码编辑器中打开一个终端，可能终端所在的默认位置并不是 `.../components/client` 或 `.../components/server`，并且您也不想手动切换位置。这时候，您可以使用 `modsdkspring import` 命令提供的参数 `--path`，指定路径。具体示例如下：
 
@@ -758,6 +756,49 @@ modsdkspring import --path "tutorialBehaviorPack/tutorialScripts/components/clie
 上面的命令假设终端的当前位置在 `TutorialMod` 中。命令执行后，会在您指定的路径中生成一个 `__init__.py` 文件。
 
 ### 将命令配置为 Visual Studio Code 任务
+
+尽管框架提供了相关命令，但每次添加或删除组件，您都要手动执行一次命令，这仍然比较麻烦，不够自动化。
+
+如果您使用 Visual Studio Code 作为您的代码编辑器，您可以阅读此部分，按照步骤配置自动化任务。
+
+最终实现的效果是，当您在 Visual Studio Code 中保存组件目录下的 `.py` 文件时，Visual Studio Code 将自动执行命令 `modsdkspring import --path "xxx"`。
+
+> 此教程环境说明如下。<br>如果您的设备环境不符合下方的说明，您也可以按此教程尝试配置，如果您遇到了问题，可自行搜索解决。<br><br>操作系统：Windows 10<br>Visual Studio Code 版本：1.72.1
+
+1. 安装扩展
+
+    在 Visual Studio Code 中的扩展中搜索 [Save and Run](https://marketplace.visualstudio.com/items?itemName=wk-j.save-and-run) 或直接点击链接，安装此扩展。本教程的 Save and Run 版本为 0.0.22。
+
+2. 配置扩展
+
+    假设您有一个如下图所示的工作区：
+
+    ![工作区截图](https://github.com/user-attachments/assets/b672f48a-c5b2-4824-b00a-381d1a02f7b3)
+
+    您需要在 `settings` 中增加如下文本：
+
+    ```json
+    "saveAndRun": {
+        "commands": [
+            {
+                "match": ".*\\\\components\\\\(client|server).*\\.py",
+                "cmd": "modsdkspring import --path \"${fileDirname}\"",
+                "useShortcut": false,
+                "silent": false
+            }
+        ]
+    }
+    ```
+
+    > 如果您有工作区文件 `XXX.code-workspace`，请按上方截图中的方式进行配置。如果您没有工作区文件，请在 `.vscode` 文件夹中的 `settings.json` 文件中添加配置。
+
+    > 您可以修改 `match` 中的正则表达式，以符合您的实际情况。
+
+3. 测试效果
+
+    现在，请尝试修改 `.../components/client` 或 `.../components/server` 文件夹下的 `.py` 文件，在您按 `ctrl + S` 保存文件时，您可以看到 Visual Studio Code 将自动打开一个终端，并执行命令。
+
+    ![测试效果截图](https://github.com/user-attachments/assets/54938356-2c2f-4498-aae0-2c9befcd1882)
 
 ## 在 modMain.py 中创建多个客户端和服务端的情况
 
