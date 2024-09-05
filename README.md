@@ -77,7 +77,7 @@ pip2 install mc-creatormc-sdkspring
     ```
 
 2. 自动生成 Mod 结构
-    
+   
     MODSDKSpring 提供了命令行形式的自动生成工具，能够自动生成包含 MODSDKSpring 的初始的 Mod 结构。
 
     如果您的电脑是 Windows 系统，在 `TutorialMod/tutorialBehaviorPack` 文件夹内的地址栏上输入 `cmd` 并按下 `Enter` 键，即可在当前位置打开一个命令行窗口。
@@ -518,7 +518,7 @@ def damageEvent(self, event):
 
 设想这样一个场景，您定义了一个专门用于播放粒子的客户端组件 `P`。您有另一个客户端组件 `A`。您想实现在客户端组件 `A` 中调用客户端组件 `P` 中的方法。这时候应该怎么办呢？
 
-要想实现在 `A` 中调用 `P` 的方法，`A` 必须获取到 `P` 的对象，然后执行 `P.xxx()` 这样的语句。`A` 和 `P` 的这种关系，我们可以称为 `A` 依赖于 `P`。即，`P` 是 `A` 的依赖。
+要想实现在 `A` 中调用 `P` 的方法，`A` 必须获取到 `P` 的对象 `p`，然后执行 `p.xxx()` 这样的语句。`A` 和 `P` 的这种关系，我们可以称为 `A` 依赖于 `P`。即，`P` 是 `A` 的依赖。
 
 MODSDKSpring 框架可以管理上述的依赖关系。具体做法是，框架会在组件被创建时，将组件的对象放入“容器”（实际上就是一个字典）当中。当组件 `A` 需要另一个组件 `P` 时，框架可以从容器中拿到 `P`，并把 `P` 通过**某种方式**传递给 `A`。
 
@@ -816,6 +816,8 @@ modsdkspring import --path "tutorialBehaviorPack/tutorialScripts/components/clie
 
 ## @ListenEvent.InitClient
 
+方法在 `xxx.plugins.MODSDKSpring.core.ListenEvent` 中，`xxx` 应替换为您的行为包中的 Mod 文件夹名称，如 `tutorialScripts`。
+
 - 描述
 
     添加在被 modMain.py 注册的客户端类的上方，开启框架相关功能
@@ -842,6 +844,8 @@ modsdkspring import --path "tutorialBehaviorPack/tutorialScripts/components/clie
 
 ## @ListenEvent.InitServer
 
+方法在 `xxx.plugins.MODSDKSpring.core.ListenEvent` 中，`xxx` 应替换为您的行为包中的 Mod 文件夹名称，如 `tutorialScripts`。
+
 - 描述
 
     添加在被 modMain.py 注册的服务端类的上方，开启框架相关功能
@@ -865,3 +869,199 @@ modsdkspring import --path "tutorialBehaviorPack/tutorialScripts/components/clie
         def __init__(self, namespace, systemName):
             pass
     ```
+
+## @ListenEvent.InitComponentClient
+
+方法在 `xxx.plugins.MODSDKSpring.core.ListenEvent` 中，`xxx` 应替换为您的行为包中的 Mod 文件夹名称，如 `tutorialScripts`。
+
+- 描述
+
+    添加到自定义的客户端 Component 类的上方，开启框架相关功能
+
+- 参数
+
+    |参数名|数据类型|说明|
+    |------|-------|----|
+    |namespace|str|注入的客户端系统的命名空间，当 modMain.py 中只注册了一个客户端时不用填写此参数|
+    |systemName|str|注入的客户端系统的系统名称，当 modMain.py 中只注册了一个客户端时不用填写此参数|
+
+- 示例
+
+    ```python
+    # -*- coding: utf-8 -*-
+    from particleModScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+
+    @ListenEvent.InitComponentClient
+    class HurtEntityClientComponent(object):
+
+        def __init__(self, client):
+            self.client = client
+    ```
+
+## @ListenEvent.InitComponentServer
+
+方法在 `xxx.plugins.MODSDKSpring.core.ListenEvent` 中，`xxx` 应替换为您的行为包中的 Mod 文件夹名称，如 `tutorialScripts`。
+
+- 描述
+
+    添加到自定义的服务端 Component 类的上方，开启框架相关功能
+
+- 参数
+
+    |参数名|数据类型|说明|
+    |------|-------|----|
+    |namespace|str|注入的服务端系统的命名空间，当 modMain.py 中只注册了一个服务端时不用填写此参数|
+    |systemName|str|注入的服务端系统的系统名称，当 modMain.py 中只注册了一个服务端时不用填写此参数|
+
+- 示例
+
+    ```python
+    # -*- coding: utf-8 -*-
+    from particleModScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+
+    @ListenEvent.InitComponentServer
+    class HurtEntityServerComponent(object):
+
+        def __init__(self, server):
+            self.server = server
+    ```
+
+## @ListenEvent.Client
+
+方法在 `xxx.plugins.MODSDKSpring.core.ListenEvent` 中，`xxx` 应替换为您的行为包中的 Mod 文件夹名称，如 `tutorialScripts`。
+
+- 描述
+
+    客户端监听事件
+
+- 参数
+
+    |参数名|数据类型|说明|
+    |------|-------|----|
+    |eventName|str|监听的事件名称|
+    |namespace|str|所监听事件的来源系统的 namespace。默认值为 clientApi.GetEngineNamespace()|
+    |systemName|str|所监听事件的来源系统的 systemName。默认值为 clientApi.GetEngineSystemName()|
+    |priority|int|回调函数的优先级。默认值为 0，这个数值越大表示被执行的优先级越高，最高为10|
+
+- 示例
+
+    ```python
+    # -*- coding: utf-8 -*-
+    from particleModScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+
+    @ListenEvent.Client(eventName="AddEntityClientEvent")
+    def addEntityClientEvent(self, args):
+        pass
+    ```
+
+    ```python
+    # -*- coding: utf-8 -*-
+    from particleModScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+    from particleModScripts.modCommon import modConfig
+
+    @ListenEvent.Client(namespace=modConfig.MOD_NAMESPACE, systemName=modConfig.SERVER_SYSTEM_NAME, eventName="DamageEventToClient")
+    def damageEvent(self, event):
+        pass
+    ```
+
+## @ListenEvent.Server
+
+方法在 `xxx.plugins.MODSDKSpring.core.ListenEvent` 中，`xxx` 应替换为您的行为包中的 Mod 文件夹名称，如 `tutorialScripts`。
+
+- 描述
+
+    服务端监听事件
+
+- 参数
+
+    |参数名|数据类型|说明|
+    |------|-------|----|
+    |eventName|str|监听的事件名称|
+    |namespace|str|所监听事件的来源系统的 namespace。默认值为 clientApi.GetEngineNamespace()|
+    |systemName|str|所监听事件的来源系统的 systemName。默认值为 clientApi.GetEngineSystemName()|
+    |priority|int|回调函数的优先级。默认值为 0，这个数值越大表示被执行的优先级越高，最高为10|
+
+- 示例
+
+    ```python
+    # -*- coding: utf-8 -*-
+    from particleModScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+
+    @ListenEvent.Server(eventName="AddEntityServerEvent")
+    def addEntityServerEvent(self, args):
+        pass
+    ```
+
+    ```python
+    # -*- coding: utf-8 -*-
+    from particleModScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+    from particleModScripts.modCommon import modConfig
+
+    @ListenEvent.Server(namespace=modConfig.MOD_NAMESPACE, systemName=modConfig.CLIENT_SYSTEM_NAME, eventName="PerspChangeClientEventToServer")
+    def perspChangeEvent(self, event):
+        pass
+    ```
+
+## @Autowired
+
+方法在 `xxx.plugins.MODSDKSpring.core.Autowired` 中，`xxx` 应替换为您的行为包中的 Mod 文件夹名称，如 `tutorialScripts`。
+
+- 描述
+
+  添加到 `__init__` 方法上的装饰器，表示此方法需要依赖注入
+
+- 参数
+
+  无
+
+- 示例
+
+  ```python
+  # -*- coding: utf-8 -*-
+  from circulateModScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+  from circulateModScripts.plugins.MODSDKSpring.core.Autowired import Autowired
+  
+  @ListenEvent.InitComponentClient
+  class CClientComponent(object):
+  
+      @Autowired
+      def __init__(self, client, aClientComponent, bClientComponent):
+          self.client = client
+          self.aClientComponent = aClientComponent
+          self.bClientComponent = bClientComponent
+  ```
+
+## @Lazy
+
+方法在 `xxx.plugins.MODSDKSpring.core.Lazy` 中，`xxx` 应替换为您的行为包中的 Mod 文件夹名称，如 `tutorialScripts`。
+
+- 描述
+
+  添加到 @Autowired 上的装饰器，表示此方法在进行依赖注入时先用 None 进行注入，对象创建之后再注入真正需要的依赖
+
+  此装饰器一般用于解决循环依赖
+
+- 参数
+
+  无
+
+- 示例
+
+  ```python
+  # -*- coding: utf-8 -*-
+  from circulateModScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+  from circulateModScripts.plugins.MODSDKSpring.core.Autowired import Autowired
+  from circulateModScripts.plugins.MODSDKSpring.core.Lazy import Lazy
+  
+  @ListenEvent.InitComponentClient
+  class AClientComponent(object):
+  
+      @Lazy
+      @Autowired
+      def __init__(self, client, bClientComponent, cClientComponent):
+          self.client = client
+          self.bClientComponent = bClientComponent
+          self.cClientComponent = cClientComponent
+  ```
+
+  
