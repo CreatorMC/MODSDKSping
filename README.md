@@ -36,7 +36,7 @@ pip2 install mc-creatormc-sdkspring
 
 > 快速入门教程改造自网易我的世界开发者官网 DemoMod 中的 [TutorialMod](https://mc.163.com/dev/mcmanual/mc-dev/mcguide/20-%E7%8E%A9%E6%B3%95%E5%BC%80%E5%8F%91/13-%E6%A8%A1%E7%BB%84SDK%E7%BC%96%E7%A8%8B/60-Demo%E7%A4%BA%E4%BE%8B.html#TutorialMod)。您在阅读本篇教程时，可与官方代码进行对照，感受 MODSDKSpring 的便捷。
 
-> 教程开始前，请确保您已经下载并安装了 [python 2.7.18](https://www.python.org/downloads/release/python-2718/)、[MODSDKSpring](https://github.com/CreatorMC/MODSDKSping/tree/main?tab=readme-ov-file#%E6%A1%86%E6%9E%B6%E4%B8%8B%E8%BD%BD) 以及 [ModSDK 补全库](https://mc.163.com/dev/mcmanual/mc-dev/mcguide/20-%E7%8E%A9%E6%B3%95%E5%BC%80%E5%8F%91/13-%E6%A8%A1%E7%BB%84SDK%E7%BC%96%E7%A8%8B/2-Python%E8%84%9A%E6%9C%AC%E5%BC%80%E5%8F%91/0-%E8%84%9A%E6%9C%AC%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8.html?catalog=1#%E5%AE%89%E8%A3%85mod-sdk%E8%A1%A5%E5%85%A8%E5%BA%93)。
+> 教程开始前，请确保您已经下载并安装了 [python 2.7.18](https://www.python.org/downloads/release/python-2718/)、[MODSDKSpring](#%E6%A1%86%E6%9E%B6%E4%B8%8B%E8%BD%BD) 以及 [ModSDK 补全库](https://mc.163.com/dev/mcmanual/mc-dev/mcguide/20-%E7%8E%A9%E6%B3%95%E5%BC%80%E5%8F%91/13-%E6%A8%A1%E7%BB%84SDK%E7%BC%96%E7%A8%8B/2-Python%E8%84%9A%E6%9C%AC%E5%BC%80%E5%8F%91/0-%E8%84%9A%E6%9C%AC%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8.html?catalog=1#%E5%AE%89%E8%A3%85mod-sdk%E8%A1%A5%E5%85%A8%E5%BA%93)。
 
 > 虽然 [ModSDK 补全库](https://mc.163.com/dev/mcmanual/mc-dev/mcguide/20-%E7%8E%A9%E6%B3%95%E5%BC%80%E5%8F%91/13-%E6%A8%A1%E7%BB%84SDK%E7%BC%96%E7%A8%8B/2-Python%E8%84%9A%E6%9C%AC%E5%BC%80%E5%8F%91/0-%E8%84%9A%E6%9C%AC%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8.html?catalog=1#%E5%AE%89%E8%A3%85mod-sdk%E8%A1%A5%E5%85%A8%E5%BA%93) 理论上不是必须的，但安装后可以帮助您的代码编辑器使用语法补全等功能。
 
@@ -103,7 +103,7 @@ pip2 install mc-creatormc-sdkspring
     'modsdkspring' 不是内部或外部命令，也不是可运行的程序或批处理文件。
     ```
 
-    说明您还没有下载并安装 MODSDKSpring。请查看本文档上方的 [框架下载](https://github.com/CreatorMC/MODSDKSping/tree/main?tab=readme-ov-file#%E6%A1%86%E6%9E%B6%E4%B8%8B%E8%BD%BD) 部分，然后重复此步骤。
+    说明您还没有下载并安装 MODSDKSpring。请查看本文档上方的 [框架下载](#%E6%A1%86%E6%9E%B6%E4%B8%8B%E8%BD%BD) 部分，然后重复此步骤。或者，您可能没有正确配置系统的环境变量，请自行搜索解决。
 
     接下来按照提示 Please enter the name of the Mod folder（请输入 Mod 文件夹的名称），输入以下名称后按 `Enter` 键。
 
@@ -585,7 +585,7 @@ class HurtEntityClientComponent(object):
 
 - 描述
 
-    该方法能够直接从容器中获取组件对象。
+    该方法能够直接从容器中获取组件对象
 
 - 参数
 
@@ -813,3 +813,55 @@ modsdkspring import --path "tutorialBehaviorPack/tutorialScripts/components/clie
 # 装饰器文档
 
 > 这一部分解释了 MODSDKSpring 中各个装饰器的参数和含义。适合入门 MODSDKSpring 后快速查阅相关功能时使用。
+
+## @ListenEvent.InitClient
+
+- 描述
+
+    添加在被 modMain.py 注册的客户端类的上方，开启框架相关功能
+
+- 参数
+
+    无
+
+- 示例
+
+    ```python
+    # -*- coding: utf-8 -*-
+    import mod.client.extraClientApi as clientApi
+    from tutorialScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+    ClientSystem = clientApi.GetClientSystemCls()
+    compFactory = clientApi.GetEngineCompFactory()
+
+    @ListenEvent.InitClient
+    class TutorialClientSystem(ClientSystem):
+
+        def __init__(self, namespace, systemName):
+            pass
+    ```
+
+## @ListenEvent.InitServer
+
+- 描述
+
+    添加在被 modMain.py 注册的服务端类的上方，开启框架相关功能
+
+- 参数
+
+    无
+
+- 示例
+
+    ```python
+    # -*- coding: utf-8 -*-
+    import mod.server.extraServerApi as serverApi
+    from tutorialScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+    ServerSystem = serverApi.GetServerSystemCls()
+    compFactory = serverApi.GetEngineCompFactory()
+
+    @ListenEvent.InitServer
+    class TutorialServerSystem(ServerSystem):
+
+        def __init__(self, namespace, systemName):
+            pass
+    ```
