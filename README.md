@@ -282,7 +282,7 @@ pip2 install mc-creatormc-sdkspring
 
 5. 代码解释
 
-    针对 MODSDKSpring，解释上一步骤中的代码。对于新增装饰器的详细说明，可以查看此文档中的 [装饰器文档](https://github.com/CreatorMC/MODSDKSping?tab=readme-ov-file#%E8%A3%85%E9%A5%B0%E5%99%A8%E6%96%87%E6%A1%A3) 部分。
+    针对 MODSDKSpring，解释上一步骤中的代码。对于新增装饰器的详细说明，可以查看此文档中的 [装饰器文档](#%E8%A3%85%E9%A5%B0%E5%99%A8%E6%96%87%E6%A1%A3) 部分。
 
     - @ListenEvent.InitServer 是什么？
 
@@ -294,7 +294,7 @@ pip2 install mc-creatormc-sdkspring
 
       这是 MODSDKSpring 框架提供的一个装饰器，只能添加到**服务端类或组件**的方法上。它代替了 self.ListenForEvent，表示此方法要监听的事件，事件的回调方法即是此方法。
 
-      其中 `eventName` 表示要监听的事件的名称。除了监听 MODSDK 提供的事件，它还可以监听其他系统发送的自定义事件，详见 [监听自定义事件](https://github.com/CreatorMC/MODSDKSping?tab=readme-ov-file#%E7%9B%91%E5%90%AC%E8%87%AA%E5%AE%9A%E4%B9%89%E4%BA%8B%E4%BB%B6) 部分。
+      其中 `eventName` 表示要监听的事件的名称。除了监听 MODSDK 提供的事件，它还可以监听其他系统发送的自定义事件，详见 [监听自定义事件](#%E7%9B%91%E5%90%AC%E8%87%AA%E5%AE%9A%E4%B9%89%E4%BA%8B%E4%BB%B6) 部分。
 
       类似的还有 @ListenEvent.Client。
     
@@ -460,7 +460,7 @@ pip2 install mc-creatormc-sdkspring
 
     **通常情况下，这是您的组件不生效的首要原因，请务必牢记！**
 
-    > 有一种更加方便的导入组件的方式，并且 MODSDKSpring 框架提供了类似于 `modsdkspring init` 一样的控制台命令。强烈建议您阅读高级内容中的 [快速导入组件](https://github.com/CreatorMC/MODSDKSping?tab=readme-ov-file#%E5%BF%AB%E9%80%9F%E5%AF%BC%E5%85%A5%E7%BB%84%E4%BB%B6) 部分。
+    > 有一种更加方便的导入组件的方式，并且 MODSDKSpring 框架提供了类似于 `modsdkspring init` 一样的控制台命令。强烈建议您阅读高级内容中的 [快速导入组件](#%E5%BF%AB%E9%80%9F%E5%AF%BC%E5%85%A5%E7%BB%84%E4%BB%B6) 部分。
 
 5. 运行
 
@@ -575,7 +575,7 @@ class HurtEntityClientComponent(object):
 
 因此，我建议您永远不要在 `__init__` 方法中调用其他组件的方法！`__init__` 方法应该只做赋值操作！
 
-至于循环依赖是什么情况，请查看 [解决循环依赖](https://github.com/CreatorMC/MODSDKSping?tab=readme-ov-file#%E8%A7%A3%E5%86%B3%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96) 部分。
+至于循环依赖是什么情况，请查看 [解决循环依赖](#%E8%A7%A3%E5%86%B3%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96) 部分。
 
 > `@Autowired` 也可以被添加到**客户端/服务端系统**的 `__init__` 方法上方，但通常情况下，您不应该这么做。
 
@@ -796,7 +796,7 @@ modsdkspring import --path "tutorialBehaviorPack/tutorialScripts/components/clie
 
 3. 测试效果
 
-    现在，请尝试修改 `.../components/client` 或 `.../components/server` 文件夹下的 `.py` 文件，在您按 `ctrl + S` 保存文件时，您可以看到 Visual Studio Code 将自动打开一个终端，并执行命令。
+    现在，请尝试修改 `.../components/client` 或 `.../components/server` 文件夹下的 `.py` 文件，在您按 `ctrl + s` 保存文件时，您可以看到 Visual Studio Code 将自动打开一个终端，并执行命令。
 
     ![测试效果截图](https://github.com/user-attachments/assets/54938356-2c2f-4498-aae0-2c9befcd1882)
 
