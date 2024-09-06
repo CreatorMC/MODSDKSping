@@ -313,6 +313,8 @@ pip2 install mc-creatormc-sdkspring
     ![启动日志截图](https://github.com/user-attachments/assets/cb77899b-1f92-45df-b524-2afdbf25bfd8)
 
     在游戏的聊天窗口中输入 `钻石剑`，验证 Mod 是否生效。如果您遇到了问题，可以再仔细看看上面的步骤，或下载 example 分支内的示例。
+    
+    > 如果您没有看到有关服务端系统的输出，可能是您的日志与调试工具没有及时打开。点击 `工具箱`，使用 `Mod PC开发包` 进入世界存档可解决此问题。
 
 # 定义组件
 
@@ -804,11 +806,185 @@ modsdkspring import --path "tutorialBehaviorPack/tutorialScripts/components/clie
 
 > 在 MODSDKSpring 框架中，我不推荐您这么做。但是，如果您仍要这么做，MODSDKSpring 也提供了方法。
 
+假设您的 `modMain.py` 文件如下所示：
+
+```python
+# -*- coding: utf-8 -*-
+
+from mod.common.mod import Mod
+import mod.client.extraClientApi as clientApi
+import mod.server.extraServerApi as serverApi
+from modCommon import modConfig
+from mod_log import logger
+
+@Mod.Binding(name=modConfig.MOD_NAMESPACE, version=modConfig.MOD_VERSION)
+class TMSMultipleMod(object):
+
+    def __init__(self):
+        logger.info("===== init %s mod =====", modConfig.MOD_NAMESPACE)
+
+    @Mod.InitServer()
+    def TMSMultipleModServerInit(self):
+        logger.info("===== init %s server =====", modConfig.SERVER_SYSTEM_NAME)
+        serverApi.RegisterSystem(modConfig.MOD_NAMESPACE, modConfig.SERVER_SYSTEM_NAME, modConfig.SERVER_SYSTEM_CLS_PATH)
+
+    @Mod.DestroyServer()
+    def TMSMultipleModServerDestroy(self):
+        logger.info("===== destroy %s server =====", modConfig.SERVER_SYSTEM_NAME)
+    
+    @Mod.InitClient()
+    def TMSMultipleModClientInit(self):
+        logger.info("===== init %s client =====", modConfig.CLIENT_SYSTEM_NAME)
+        clientApi.RegisterSystem(modConfig.MOD_NAMESPACE, modConfig.CLIENT_SYSTEM_NAME, modConfig.CLIENT_SYSTEM_CLS_PATH)
+    
+    @Mod.DestroyClient()
+    def TMSMultipleModClientDestroy(self):
+        logger.info("===== destroy %s client =====", modConfig.CLIENT_SYSTEM_NAME)
+
+@Mod.Binding(name=modConfig.MOD_NAMESPACE_1, version=modConfig.MOD_VERSION_1)
+class TMSCopyMod(object):
+
+    def __init__(self):
+        logger.info("===== init %s mod =====", modConfig.MOD_NAMESPACE_1)
+
+    @Mod.InitServer()
+    def TMSCopyModServerInit(self):
+        logger.info("===== init %s server =====", modConfig.SERVER_SYSTEM_NAME_1)
+        serverApi.RegisterSystem(modConfig.MOD_NAMESPACE_1, modConfig.SERVER_SYSTEM_NAME_1, modConfig.SERVER_SYSTEM_CLS_PATH_1)
+
+    @Mod.DestroyServer()
+    def TMSCopyModServerDestroy(self):
+        logger.info("===== destroy %s server =====", modConfig.SERVER_SYSTEM_NAME_1)
+    
+    @Mod.InitClient()
+    def TMSCopyModClientInit(self):
+        logger.info("===== init %s client =====", modConfig.CLIENT_SYSTEM_NAME_1)
+        clientApi.RegisterSystem(modConfig.MOD_NAMESPACE_1, modConfig.CLIENT_SYSTEM_NAME_1, modConfig.CLIENT_SYSTEM_CLS_PATH_1)
+    
+    @Mod.DestroyClient()
+    def TMSCopyModClientDestroy(self):
+        logger.info("===== destroy %s client =====", modConfig.CLIENT_SYSTEM_NAME_1)
+```
+
+`modConfig.py` 代码如下：
+
+```python
+# -*- coding: utf-8 -*-
+
+# Mod Version
+MOD_NAMESPACE = "TMSMultipleMod"
+MOD_VERSION = "0.0.1"
+
+# Client System
+CLIENT_SYSTEM_NAME = "MultipleClientSystem"
+CLIENT_SYSTEM_CLS_PATH = "multipleModScripts.MultipleClientSystem.MultipleClientSystem"
+
+# Server System
+SERVER_SYSTEM_NAME = "MultipleServerSystem"
+SERVER_SYSTEM_CLS_PATH = "multipleModScripts.MultipleServerSystem.MultipleServerSystem"
+
+# Mod Version
+MOD_NAMESPACE_1 = "TMSCopyMod"
+MOD_VERSION_1 = "0.0.1"
+
+# Client System
+CLIENT_SYSTEM_NAME_1 = "CopyClientSystem"
+CLIENT_SYSTEM_CLS_PATH_1 = "multipleModScripts.CopyClientSystem.CopyClientSystem"
+
+# Server System
+SERVER_SYSTEM_NAME_1 = "CopyServerSystem"
+SERVER_SYSTEM_CLS_PATH_1 = "multipleModScripts.CopyServerSystem.CopyServerSystem"
+```
+
+下方的代码定义了一个属于 `CopyClientSystem` 的组件：
+
+```python
+# -*- coding: utf-8 -*-
+from multipleModScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+from multipleModScripts.modCommon import modConfig
+from multipleModScripts.plugins.MODSDKSpring.core.log.Log import logger
+
+@ListenEvent.InitComponentClient(namespace=modConfig.MOD_NAMESPACE_1, systemName=modConfig.CLIENT_SYSTEM_NAME_1)
+class ACopyClientComponent(object):
+
+    def __init__(self, client):
+        self.client = client
+        logger.info("ACopyClientComponent 获取到的系统：" + str(client))
+```
+
+下方的代码定义了一个属于 `CopyServerSystem` 的组件：
+
+```python
+# -*- coding: utf-8 -*-
+from multipleModScripts.plugins.MODSDKSpring.core.ListenEvent import ListenEvent
+from multipleModScripts.modCommon import modConfig
+from multipleModScripts.plugins.MODSDKSpring.core.log.Log import logger
+
+@ListenEvent.InitComponentServer(namespace=modConfig.MOD_NAMESPACE_1, systemName=modConfig.SERVER_SYSTEM_NAME_1)
+class ACopyServerComponent(object):
+
+    def __init__(self, server):
+        self.server = server
+        logger.info("ACopyServerComponent 获取到的系统：" + str(server))
+```
+
+需要明确一点的是，如果您的 `modMain.py` 中注册了多个系统，您需要在 `@ListenEvent.InitComponentClient` 或 `@ListenEvent.InitComponentServer` 当中填写 `namespace` 和 `systemName` 这两个参数，以此来指定此组件属于哪个系统。不可以省略不填！
+
+如果您还有疑问，可以下载 example 分支中的 [MultipleMod]() 示例。此示例还展示了如何实现不同系统的组件之间的调用。
+
 ## 自定义 Mod 生成模板（未来可能的功能）
 
 实际上，现在已经能自定义生成模板了，只是模板被内置在框架当中，没有提供对外的标准方法。感兴趣的开发者，可以阅读相关源码，自行探索自定义生成模板的方法。或者，欢迎您对本框架的代码做出贡献！
 
-# 可能遇到的问题及解决方案
+# 可能遇到的问题
+
+> 您在日志中可能会看到下方所列的这些提示信息，如果您看到了并且不知道怎么解决，可以查阅此部分。
+>
+> 下方标题或描述中提到的 `XXX`、`xxx` 和 `YYY` 均表示实际的类或方法。
+
+## 没有找到带有 @InitComponentClient 或 @InitComponentServer 的类 XXX，将使用 None 进行注入。
+
+- 原因
+
+  看到此日志可能是因为您真的没有在类 `XXX` 上添加 `@InitComponentClient` 或 `@InitComponentServer`，导致类 `XXX` 的对象不能被注入。
+
+  另一种情况是，当您在 `modMain.py` 中注册了多个系统时，您在某个系统中要想用 `@Autowired` 注入其他系统的组件对象。这种情况属于跨系统调用组件，请使用 [getBean()](#getbean-方法) 方法。
+
+## 类 XXX 和 YYY 之间存在循环依赖，请使用 @Lazy 解决。
+
+- 原因
+
+  当两个类彼此都需要注入对方的对象时，会出现此异常信息。可参考 [解决循环依赖](#解决循环依赖) 部分。
+
+## 方法 xxx 不是 \_\_init\_\_，不能使用 @Autowired 装饰器。
+
+- 原因
+
+  您将 `@Autowired` 加在了 `xxx` 方法的上方。`@Autowired` 只能加在组件或系统类的 `__init__` 方法上方。
+
+## @Lazy 必须添加在 @Autowired 的上方。
+
+- 原因
+
+  您写了如下所示的代码：
+
+  ```python
+  @Autowired
+  @Lazy
+  def __init__(self, client, aClientComponent):
+      # ...
+  ```
+
+  将代码调整为：
+
+  ```python
+  @Lazy
+  @Autowired
+  def __init__(self, client, aClientComponent):
+      # ...
+  ```
+
+  即可解决。
 
 # 装饰器文档
 
