@@ -514,7 +514,7 @@ def damageEvent(self, event):
 
 服务端系统/组件同理，只是替换为 `@ListenEvent.Server`。
 
-在 [ParticleMod]() 示例中，客户端组件 `HurtEntityClientComponent.py` 监听了服务端组件 `HurtEntityServerComponent.py` 发出的自定义事件 `DamageEventToClient`。您可以下载此示例，查看具体代码。
+在 [ParticleMod](https://github.com/CreatorMC/MODSDKSping/tree/example/ParticleMod) 示例中，客户端组件 `HurtEntityClientComponent.py` 监听了服务端组件 `HurtEntityServerComponent.py` 发出的自定义事件 `DamageEventToClient`。您可以下载此示例，查看具体代码。
 
 # 跨组件调用（依赖注入）
 
@@ -571,7 +571,7 @@ class HurtEntityClientComponent(object):
         self.particleClientComponent = particleClientComponent
 ```
 
-上述代码来源于 example 分支中的 [ParticleMod]() 示例，您可以自行下载查看。
+上述代码来源于 example 分支中的 [ParticleMod](https://github.com/CreatorMC/MODSDKSping/tree/example/ParticleMod) 示例，您可以自行下载查看。
 
 注意，在 `__init__` 方法中，变量 `particleClientComponent` 不总是有值。如果有循环依赖的情况，可能变量 `particleClientComponent` 在执行完 `__init__` 方法后，才被赋值，所以变量 `particleClientComponent` 在 `__init__` 方法中可能为 `None`。
 
@@ -651,11 +651,11 @@ class A(object):
         self.b = b # self.b 的值此时为 None，所有组件创建完成后，框架会自动为 self.b 赋值。
 ```
 
-如果遇到了问题，您可以下载 example 分支中的 [CirculateMod]() 示例，此示例专门演示了如何解决循环依赖。
+如果遇到了问题，您可以下载 example 分支中的 [CirculateMod](https://github.com/CreatorMC/MODSDKSping/tree/example/CirculateMod) 示例，此示例专门演示了如何解决循环依赖。
 
 > `@Lazy` 只能写在 `@Autowired` 的上方！如果写在 `@Autowired` 下方，您会在网易我的世界开发者启动器的日志窗口中看到 `@Lazy 必须添加在 @Autowired 的上方。` 的异常提示。
 
-> `@Lazy` 不能用于**客户端/服务端系统**的 `__init__` 方法上（这里指的是客户端或服务端系统，不是组件）。因为这完全没有必要，使用 `@Autowired` 已足够将组件注入到客户端/服务端系统中，并且不会与系统之间产生循环依赖。如果您对此仍有疑惑，请查看 [CirculateMod]() 示例。
+> `@Lazy` 不能用于**客户端/服务端系统**的 `__init__` 方法上（这里指的是客户端或服务端系统，不是组件）。因为这完全没有必要，使用 `@Autowired` 已足够将组件注入到客户端/服务端系统中，并且不会与系统之间产生循环依赖。如果您对此仍有疑惑，请查看 [CirculateMod](https://github.com/CreatorMC/MODSDKSping/tree/example/CirculateMod) 示例。
 
 # 高级内容
 
@@ -930,7 +930,7 @@ class ACopyServerComponent(object):
 
 需要明确一点的是，如果您的 `modMain.py` 中注册了多个系统，您需要在 `@ListenEvent.InitComponentClient` 或 `@ListenEvent.InitComponentServer` 当中填写 `namespace` 和 `systemName` 这两个参数，以此来指定此组件属于哪个系统。不可以省略不填！
 
-如果您还有疑问，可以下载 example 分支中的 [MultipleMod]() 示例。此示例还展示了如何实现不同系统的组件之间的调用。
+如果您还有疑问，可以下载 example 分支中的 [MultipleMod](https://github.com/CreatorMC/MODSDKSping/tree/example/MultipleMod) 示例。此示例还展示了如何实现不同系统的组件之间的调用。
 
 ## 自定义 Mod 生成模板（未来可能的功能）
 
