@@ -17,7 +17,7 @@ setup(
     },
     include_package_data=True,
     classifiers=[
-        "Programming Language :: Python :: 2.7.18",
+        "Programming Language :: Python :: 2.7",
         "License :: OSI Approved :: MIT License"
     ],
     platforms='any'
