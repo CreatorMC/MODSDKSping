@@ -6,6 +6,7 @@ setup(
     version='1.0.0',
     description = "一个基于网易我的世界 MODSDK 开发的框架，可以让开发者更方便的使用 MODSDK。",
     long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
     author='CreatorMC',
     url='https://github.com/CreatorMC/MODSDKSping',
     packages=find_packages(),
