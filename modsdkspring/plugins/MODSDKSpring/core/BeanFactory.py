@@ -81,6 +81,18 @@ class BeanFactory(object):
         return tempDict.get(beanName)
 
     @staticmethod
+    def setBean(systemType, beanName, beanObj):
+        """
+        手动设置容器中的 Bean
+
+        Args:
+            systemType (str): Bean 绑定的系统的类型，请使用常量 SystemType.CLIENT 或 SystemType.SERVER
+            beanName (str): Bean 的名称，建议遵循首字母小写规则
+            beanObj (object): Bean 对象
+        """
+        BeanFactory.componentObjectDict[systemType][beanName] = beanObj
+
+    @staticmethod
     def createBean(system, systemType, namespace, systemName):
         """
         创建 Bean 并进行依赖注入
