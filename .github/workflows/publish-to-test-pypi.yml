@@ -18,13 +18,11 @@ permissions:
 jobs:
   release-build:
     runs-on: ubuntu-latest
+    container:
+      image: python:2.7.18
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
 
       - name: Build release distributions
         run: |
@@ -51,11 +49,7 @@ jobs:
     environment:
       name: pypi
       # OPTIONAL: uncomment and update to include your PyPI project URL in the deployment status:
-      # url: https://pypi.org/p/YOURPROJECT
-      #
-      # ALTERNATIVE: if your GitHub Release name is the PyPI project version string
-      # ALTERNATIVE: exactly, uncomment the following line instead:
-      url: https://test.pypi.org/project/mc-creatormc-sdkspring/${{ github.event.release.name }}
+      url: https://pypi.org/p/mc-creatormc-sdkspring
 
     steps:
       - name: Retrieve release distributions
@@ -68,4 +62,4 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
-          repository_url: ${{ vars.PYPI_URL }}
+          repository-url: ${{ vars.PYPI_URL }}
