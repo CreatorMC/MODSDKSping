@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import types
 import mod.client.extraClientApi as clientApi
 import mod.server.extraServerApi as serverApi
 import inspect
@@ -78,11 +79,22 @@ class ListenEvent(object):
         # 记录原本的 Destroy 方法
         origDestroy = cls.Destroy
 
+        # 定义 Mod 在客户端和服务端加载完成时触发的函数，用于框架在运行时动态导入模块
+        def _modSDKSpringLoadFinish(self, event):
+            className, suffix = ('NotifyServer', '.Network.server.NotifyServer') if SystemType.SERVER == systemType else ('NotifyClient', '.Network.client.NotifyClient')
+            ListenEvent._registerNotifySystem(className, suffix, systemType)
+            ListenEvent._registerNotifyFunction(self, systemType)
+        
+        # 给客户端和服务端系统类添加方法
+        cls._modSDKSpringLoadFinish = _modSDKSpringLoadFinish
+
         def newInit(self, namespace, systemName, *args, **kwargs):
             if isinstance(self, ServerSystem):
                 ServerSystem.__init__(self, namespace, systemName)
+                self.ListenForEvent(serverApi.GetEngineNamespace(), serverApi.GetEngineSystemName(), "LoadServerAddonScriptsAfter", self, self._modSDKSpringLoadFinish, 0)
             elif isinstance(self, ClientSystem):
                 ClientSystem.__init__(self, namespace, systemName)
+                self.ListenForEvent(clientApi.GetEngineNamespace(), clientApi.GetEngineSystemName(), "LoadClientAddonScriptsAfter", self, self._modSDKSpringLoadFinish, 0)
 
             # 处理监听
             ListenEvent.listenEvent(cls, self, self)
@@ -127,8 +139,19 @@ class ListenEvent(object):
             targetSystemName (str): 注入的系统的系统名称，如果值为 Target.DEFAULT 则不判断注入的系统对象的系统名称
         """
         origInit = cls.__init__
+
+        # 定义 Mod 在客户端和服务端加载完成时触发的函数，用于框架在运行时动态导入模块
+        def _modSDKSpringLoadFinish(self, event):
+            ListenEvent._registerNotifyFunction(self, systemType)
+        
+        # 给客户端和服务端组件类添加方法
+        cls._modSDKSpringLoadFinish = _modSDKSpringLoadFinish
         
         def newInit(self, system, *args, **kwargs):
+            if isinstance(system, ServerSystem):
+                system.ListenForEvent(serverApi.GetEngineNamespace(), serverApi.GetEngineSystemName(), "LoadServerAddonScriptsAfter", self, self._modSDKSpringLoadFinish, 0)
+            elif isinstance(system, ClientSystem):
+                system.ListenForEvent(clientApi.GetEngineNamespace(), clientApi.GetEngineSystemName(), "LoadClientAddonScriptsAfter", self, self._modSDKSpringLoadFinish, 0)
 
             # 处理监听
             ListenEvent.listenEvent(cls, system, self)
@@ -224,5 +247,56 @@ class ListenEvent(object):
         elif isinstance(origInit, Autowired):
             # 存储此构造方法的参数名称列表
             newInit.args = inspect.getargspec(origInit.function).args
+
+    @staticmethod
+    def _importModule(suffix, systemType):
+        # type: (str, str) -> types.ModuleType
+        """
+        动态导入模块
+
+        Args:
+            suffix (str): 从 MODSDKSpring 的下一级开始的后缀模块路径
+            systemType (str): 系统的类型，请使用常量 SystemType.CLIENT 或 SystemType.SERVER
+
+        Returns:
+            module: 模块
+        """
+        path = ListenEvent.__module__
+        path = path[0:path.rindex('.')]
+        path = path[0:path.rindex('.')]
+        path += suffix
+        return clientApi.ImportModule(path) if SystemType.CLIENT == systemType else serverApi.ImportModule(path)
+
+    @staticmethod
+    def _registerNotifySystem(className, suffix, systemType):
+        # type: (str, str, str) -> None
+        """
+        注册通知系统
+
+        Args:
+            className (str): 类名
+            suffix (str): 从 MODSDKSpring 的下一级开始的后缀模块路径
+            systemType (str): 系统的类型，请使用常量 SystemType.CLIENT 或 SystemType.SERVER
+        """
+        notifyModule = ListenEvent._importModule(suffix, systemType)
+        if notifyModule:
+            getattr(notifyModule, className).getSystem()
+
+    @staticmethod
+    def _registerNotifyFunction(system, systemType):
+        # type: (object, str) -> None
+        """
+        注册通知方法
+
+        Args:
+            system (object): 对象
+            systemType (str): 系统的类型，请使用常量 SystemType.CLIENT 或 SystemType.SERVER
+        """
+        notifyModule = ListenEvent._importModule('.Network.NotifyManage', systemType)
+        if notifyModule:
+            members = inspect.getmembers(system, predicate=inspect.ismethod)
+            for name, method in members:
+                if method.__dict__.get('allowNotify'):
+                    notifyModule.NotifyManage.registerFunction(method)
 
 # endregion
