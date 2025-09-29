@@ -12,7 +12,9 @@ class NotifyManage(object):
     SERVER_SYSTEM_NAME = "MODSDKSPRING_NOTIFY_SERVER_{}".format(ROOT_DIR_NAME)
     SERVER_TO_CLIENT = "SERVER_TO_CLIENT"
     CLIENT_TO_SERVER = "CLIENT_TO_SERVER"
+    CLIENT_TO_CLIENT = "CLIENT_TO_CLIENT"
     EVENT_METHOD_NAME = "__modsdkspring_method_name__"
+    EVENT_ID_LIST = "__modsdkspring_id_list__"
     # 存放当前系统的通过 @AllowNotify 注册的函数
     _functionDict = {}
 
@@ -108,3 +110,22 @@ def NotifyToServer(methodName, eventData):
     from client.NotifyClient import NotifyClient
     eventData[NotifyManage.EVENT_METHOD_NAME] = methodName
     NotifyClient.getSystem().NotifyToServer(NotifyManage.CLIENT_TO_SERVER, eventData)
+
+def NotifyFromClientToClient(targetId, methodName, eventData):
+    # type: (str | list[str], str, dict) -> 'None'
+    """
+    客户端发送事件到另一批玩家的客户端
+
+    Args:
+        targetId (str | list): 客户端玩家 ID
+        methodName (str): 客户端方法名称
+        eventData (dict): 发送的数据
+    """
+    # 避免循环引用
+    from client.NotifyClient import NotifyClient
+    eventData[NotifyManage.EVENT_METHOD_NAME] = methodName
+    targetIdList = targetId
+    if not isinstance(targetIdList, list):
+        targetIdList = [targetIdList]
+    eventData[NotifyManage.EVENT_ID_LIST] = targetIdList
+    NotifyClient.getSystem().NotifyToServer(NotifyManage.CLIENT_TO_CLIENT, eventData)

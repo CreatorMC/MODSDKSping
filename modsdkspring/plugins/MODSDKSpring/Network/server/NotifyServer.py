@@ -22,6 +22,11 @@ class NotifyServer(ServerSystem, NotifySystem):
         ServerSystem.__init__(self, namespace, systemName)
         # 监听客户端事件
         self.ListenForEvent(NotifyManage.NAMESPACE, NotifyManage.CLIENT_SYSTEM_NAME, NotifyManage.CLIENT_TO_SERVER, self, self._callFunction)
+        self.ListenForEvent(NotifyManage.NAMESPACE, NotifyManage.CLIENT_SYSTEM_NAME, NotifyManage.CLIENT_TO_CLIENT, self, self._callClientFunction)
+
+    def _callClientFunction(self, eventDate):
+        targetIdList = eventDate.pop(NotifyManage.EVENT_ID_LIST, None)
+        self.NotifyToMultiClients(targetIdList, NotifyManage.SERVER_TO_CLIENT, eventDate)
 
     def Destroy(self):
         self.UnListenAllEvents()
