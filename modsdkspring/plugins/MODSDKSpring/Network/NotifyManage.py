@@ -12,7 +12,7 @@ class NotifyManage(object):
     SERVER_SYSTEM_NAME = "MODSDKSPRING_NOTIFY_SERVER_{}".format(ROOT_DIR_NAME)
     SERVER_TO_CLIENT = "SERVER_TO_CLIENT"
     CLIENT_TO_SERVER = "CLIENT_TO_SERVER"
-    EVENT_METHOD_NAME = "MODSDKSPRING_METHOD_NAME"
+    EVENT_METHOD_NAME = "__modsdkspring_method_name__"
     # 存放当前系统的通过 @AllowNotify 注册的函数
     _functionDict = {}
 
@@ -34,7 +34,7 @@ class NotifyManage(object):
         """
         调用注册的函数
         """
-        key = eventDate[NotifyManage.EVENT_METHOD_NAME]
+        key = eventDate.pop(NotifyManage.EVENT_METHOD_NAME, None)
         func = NotifyManage._functionDict.get(key)
         if not func:
             logger.error("调用 Notify 时异常，请检查是否在 %s 方法上添加了 @AllowNotify", key)
@@ -47,7 +47,53 @@ def AllowNotify(func):
     设置此方法能被框架中的通信方法进行调用
     """
     func.allowNotify = True
+    # 在这里直接注册仅仅是为了支持没有绑定实例的函数
+    NotifyManage.registerFunction(func)
     return func
+
+def BroadcastToAllClient(methodName, eventData):
+    # type: (str, dict) -> 'None'
+    """
+    服务端广播事件到所有客户端
+
+    Args:
+        methodName (str): 客户端方法名称
+        eventData (dict): 发送的数据
+    """
+    # 避免循环引用
+    from server.NotifyServer import NotifyServer
+    eventData[NotifyManage.EVENT_METHOD_NAME] = methodName
+    NotifyServer.getSystem().BroadcastToAllClient(NotifyManage.SERVER_TO_CLIENT, eventData)
+
+def NotifyToClient(targetId, methodName, eventData):
+    # type: (str, str, dict) -> 'None'
+    """
+    服务端发送事件到指定客户端
+
+    Args:
+        targetId (str): 客户端玩家 ID
+        methodName (str): 客户端方法名称
+        eventData (dict): 发送的数据
+    """
+    # 避免循环引用
+    from server.NotifyServer import NotifyServer
+    eventData[NotifyManage.EVENT_METHOD_NAME] = methodName
+    NotifyServer.getSystem().NotifyToClient(targetId, NotifyManage.SERVER_TO_CLIENT, eventData)
+
+def NotifyToMultiClients(targetIdList, methodName, eventData):
+    # type: (list[str], str, dict) -> 'None'
+    """
+    服务端发送事件到指定一批客户端
+
+    Args:
+        targetIdList (list): 客户端玩家 ID 列表
+        methodName (str): 客户端方法名称
+        eventData (dict): 发送的数据
+    """
+    # 避免循环引用
+    from server.NotifyServer import NotifyServer
+    eventData[NotifyManage.EVENT_METHOD_NAME] = methodName
+    NotifyServer.getSystem().NotifyToMultiClients(targetIdList, NotifyManage.SERVER_TO_CLIENT, eventData)
 
 def NotifyToServer(methodName, eventData):
     # type: (str, dict) -> 'None'
@@ -62,18 +108,3 @@ def NotifyToServer(methodName, eventData):
     from client.NotifyClient import NotifyClient
     eventData[NotifyManage.EVENT_METHOD_NAME] = methodName
     NotifyClient.getSystem().NotifyToServer(NotifyManage.CLIENT_TO_SERVER, eventData)
-
-def NotifyToClient(targetId, methodName, eventData):
-    # type: (str, str, dict) -> 'None'
-    """
-    服务端发送事件到客户端
-
-    Args:
-        targetId (str): 客户端玩家 ID
-        methodName (str): 客户端方法名称
-        eventData (dict): 发送的数据
-    """
-    # 避免循环引用
-    from server.NotifyServer import NotifyServer
-    eventData[NotifyManage.EVENT_METHOD_NAME] = methodName
-    NotifyServer.getSystem().NotifyToClient(targetId, NotifyManage.SERVER_TO_CLIENT, eventData)

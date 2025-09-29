@@ -265,7 +265,10 @@ class ListenEvent(object):
         path = path[0:path.rindex('.')]
         path = path[0:path.rindex('.')]
         path += suffix
-        return clientApi.ImportModule(path) if SystemType.CLIENT == systemType else serverApi.ImportModule(path)
+        try:
+            return clientApi.ImportModule(path) if SystemType.CLIENT == systemType else serverApi.ImportModule(path)
+        except Exception as e:
+            return None
 
     @staticmethod
     def _registerNotifySystem(className, suffix, systemType):
