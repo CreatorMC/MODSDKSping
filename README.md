@@ -28,6 +28,12 @@ pip install mc-creatormc-sdkspring
 pip2 install mc-creatormc-sdkspring
 ```
 
+# 框架升级
+
+```shell
+pip install --upgrade mc-creatormc-sdkspring
+```
+
 # 示例代码
 
 本文档中的教程源码，均可在仓库中的 [example](https://github.com/CreatorMC/MODSDKSping/tree/example) 分支中查看。
