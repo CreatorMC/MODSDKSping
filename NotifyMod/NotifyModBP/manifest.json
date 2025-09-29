@@ -1,0 +1,18 @@
+{
+	"format_version": 2,
+	"header": {
+		"name": "MODSDKSpring教程行为包",
+		"description": "作者:创造者MC",
+		"uuid": "6c99fb79-3935-4f39-a092-1cb88b3171de",
+		"version": [1 ,0 ,0],
+		"min_engine_version": [1 ,18 ,0]
+	},
+	"modules": [
+		{
+			"description": "作者:创造者MC",
+			"uuid": "05862375-a0c9-4162-ac2c-1d9a9bc6efd1",
+			"version": [1 ,0 ,0],
+			"type": "data"
+		}
+	]
+}
