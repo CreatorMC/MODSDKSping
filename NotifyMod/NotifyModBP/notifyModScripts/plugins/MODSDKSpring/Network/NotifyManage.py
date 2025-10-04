@@ -25,6 +25,11 @@ class NotifyManage(object):
         注册函数到字典
         """
         key = func.__module__ + '.' + func.__name__
+        # 如果当前方法未绑定实例，但系统已注册过了当前方法绑定实例的版本，那么这次调用不注册
+        if not NotifyManage.isBoundMethod(func):
+            func1 = NotifyManage._functionDict.get(key)
+            if NotifyManage.isBoundMethod(func1):
+                return
         # 注册一个全限定名称的 key（在方法名称冲突时作为保底方案，调用时需要填写全限定名称）
         NotifyManage._functionDict[key] = func
         # 注册一个只有方法名称的 key（方便调用）
@@ -42,6 +47,14 @@ class NotifyManage(object):
             logger.error("调用 Notify 时异常，请检查是否在 %s 方法上添加了 @AllowNotify", key)
             return
         func(eventDate)
+
+    @staticmethod
+    def isBoundMethod(method):
+        # type: (function) -> bool
+        """
+        判断方法是否绑定了实例
+        """
+        return hasattr(method, 'im_self') and method.im_self is not None
 
 def AllowNotify(func):
     # type: (function) -> function
