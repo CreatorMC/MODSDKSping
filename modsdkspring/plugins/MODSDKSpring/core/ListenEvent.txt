@@ -10,8 +10,10 @@ from log.Log import logger
 from BeanFactory import BeanFactory
 from Autowired import Autowired
 from Lazy import Lazy
+
 ClientSystem = clientApi.GetClientSystemCls()
 ServerSystem = serverApi.GetServerSystemCls()
+
 
 class ListenEvent(object):
     """
@@ -33,7 +35,7 @@ class ListenEvent(object):
         return ListenEvent.Init(cls, SystemType.SERVER)
 
     @staticmethod
-    def InitComponentClient(cls = None, namespace = Target.DEFAULT, systemName = Target.DEFAULT):
+    def InitComponentClient(cls=None, namespace=Target.DEFAULT, systemName=Target.DEFAULT):
         """
         添加到自定义的客户端 Component 类的上方，开启框架相关功能
 
@@ -50,7 +52,7 @@ class ListenEvent(object):
         return wrapper
 
     @staticmethod
-    def InitComponentServer(cls = None, namespace = Target.DEFAULT, systemName = Target.DEFAULT):
+    def InitComponentServer(cls=None, namespace=Target.DEFAULT, systemName=Target.DEFAULT):
         """
         添加到自定义的服务端 Component 类的上方，开启框架相关功能
 
@@ -84,7 +86,7 @@ class ListenEvent(object):
             className, suffix = ('NotifyServer', '.Network.server.NotifyServer') if SystemType.SERVER == systemType else ('NotifyClient', '.Network.client.NotifyClient')
             ListenEvent._registerNotifySystem(className, suffix, systemType)
             ListenEvent._registerNotifyFunction(self, systemType)
-        
+
         # 给客户端和服务端系统类添加方法
         cls._modSDKSpringLoadFinish = _modSDKSpringLoadFinish
 
@@ -143,10 +145,10 @@ class ListenEvent(object):
         # 定义 Mod 在客户端和服务端加载完成时触发的函数，用于框架在运行时动态导入模块
         def _modSDKSpringLoadFinish(self, event):
             ListenEvent._registerNotifyFunction(self, systemType)
-        
+
         # 给客户端和服务端组件类添加方法
         cls._modSDKSpringLoadFinish = _modSDKSpringLoadFinish
-        
+
         def newInit(self, system, *args, **kwargs):
             if isinstance(system, ServerSystem):
                 system.ListenForEvent(serverApi.GetEngineNamespace(), serverApi.GetEngineSystemName(), "LoadServerAddonScriptsAfter", self, self._modSDKSpringLoadFinish, 0)
@@ -163,11 +165,11 @@ class ListenEvent(object):
         ListenEvent.checkDecorator(origInit, newInit)
 
         cls.__init__ = newInit
-        BeanFactory.componentClsDict[systemType][cls.__name__[0].lower() + cls.__name__[1:]] = [ cls, targetNamespace, targetSystemName ]
+        BeanFactory.componentClsDict[systemType][cls.__name__[0].lower() + cls.__name__[1:]] = [cls, targetNamespace, targetSystemName]
         return cls
 
     @staticmethod
-    def Client(eventName, namespace = clientApi.GetEngineNamespace(), systemName = clientApi.GetEngineSystemName(), priority = 0):
+    def Client(eventName, namespace=clientApi.GetEngineNamespace(), systemName=clientApi.GetEngineSystemName(), priority=0):
         """
         客户端监听事件
         Args:
@@ -176,21 +178,22 @@ class ListenEvent(object):
             systemName (str, optional): 所监听事件的来源系统的 systemName。默认值为 clientApi.GetEngineSystemName()。
             priority (int, optional): 回调函数的优先级。默认值为 0，这个数值越大表示被执行的优先级越高，最高为10。
         """
-        def register(func):
 
+        def register(func):
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 func(*args, **kwargs)
-            
+
             wrapper.eventName = eventName
             wrapper.namespace = namespace
             wrapper.systemName = systemName
             wrapper.priority = priority
             return wrapper
+
         return register
 
     @staticmethod
-    def Server(eventName, namespace = clientApi.GetEngineNamespace(), systemName = clientApi.GetEngineSystemName(), priority = 0):
+    def Server(eventName, namespace=clientApi.GetEngineNamespace(), systemName=clientApi.GetEngineSystemName(), priority=0):
         """
         服务端监听事件
         Args:
@@ -199,20 +202,21 @@ class ListenEvent(object):
             systemName (str, optional): 所监听事件的来源系统的 systemName。默认值为 clientApi.GetEngineSystemName()。
             priority (int, optional): 回调函数的优先级。默认值为 0，这个数值越大表示被执行的优先级越高，最高为10。
         """
-        def register(func):
 
+        def register(func):
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 func(*args, **kwargs)
-            
+
             wrapper.eventName = eventName
             wrapper.namespace = namespace
             wrapper.systemName = systemName
             wrapper.priority = priority
             return wrapper
+
         return register
 
-# region 功能方法，使用者不应该显式调用此部分！
+    # region 功能方法，使用者不应该显式调用此部分！
 
     @staticmethod
     def listenEvent(cls, system, component):
@@ -229,6 +233,22 @@ class ListenEvent(object):
             if "eventName" in method.__dict__:
                 if isinstance(system, ClientSystem) or isinstance(system, ServerSystem):
                     system.ListenForEvent(method.namespace, method.systemName, method.eventName, component, method, method.priority)
+
+    @staticmethod
+    def unListenEvent(cls, system, component):
+        """
+        销毁监听
+
+        Args:
+            cls (type): 要销毁监听的类型本身
+            system (ClientSystem | ServerSystem): 被注册的客户端或服务端对象
+            component (object): 客户端或服务端组件对象
+        """
+        members = inspect.getmembers(cls, predicate=inspect.ismethod)
+        for name, method in members:
+            if "eventName" in method.__dict__:
+                if isinstance(system, ClientSystem) or isinstance(system, ServerSystem):
+                    system.UnListenForEvent(method.namespace, method.systemName, method.eventName, component, method, method.priority)
 
     @staticmethod
     def checkDecorator(origInit, newInit):
@@ -302,4 +322,4 @@ class ListenEvent(object):
                 if method.__dict__.get('allowNotify'):
                     notifyModule.NotifyManage.registerFunction(method)
 
-# endregion
+    # endregion

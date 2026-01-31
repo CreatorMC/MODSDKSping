@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+import mod.client.extraClientApi as clientApi
+from ..core.ListenEvent import ListenEvent
 from ..core.SystemInfo import ROOT_DIR_NAME
 from ..core.log.Log import logger
+
 
 class NotifyManage(object):
     """
@@ -56,6 +59,7 @@ class NotifyManage(object):
         """
         return hasattr(method, 'im_self') and method.im_self is not None
 
+
 def AllowNotify(func):
     # type: (function) -> function
     """
@@ -65,6 +69,7 @@ def AllowNotify(func):
     # 在这里直接注册仅仅是为了支持没有绑定实例的函数
     NotifyManage.registerFunction(func)
     return func
+
 
 def BroadcastToAllClient(methodName, eventData):
     # type: (str, dict) -> 'None'
@@ -79,6 +84,7 @@ def BroadcastToAllClient(methodName, eventData):
     from server.NotifyServer import NotifyServer
     eventData[NotifyManage.EVENT_METHOD_NAME] = methodName
     NotifyServer.getSystem().BroadcastToAllClient(NotifyManage.SERVER_TO_CLIENT, eventData)
+
 
 def NotifyToClient(targetId, methodName, eventData):
     # type: (str, str, dict) -> 'None'
@@ -95,6 +101,7 @@ def NotifyToClient(targetId, methodName, eventData):
     eventData[NotifyManage.EVENT_METHOD_NAME] = methodName
     NotifyServer.getSystem().NotifyToClient(targetId, NotifyManage.SERVER_TO_CLIENT, eventData)
 
+
 def NotifyToMultiClients(targetIdList, methodName, eventData):
     # type: (list[str], str, dict) -> 'None'
     """
@@ -110,6 +117,7 @@ def NotifyToMultiClients(targetIdList, methodName, eventData):
     eventData[NotifyManage.EVENT_METHOD_NAME] = methodName
     NotifyServer.getSystem().NotifyToMultiClients(targetIdList, NotifyManage.SERVER_TO_CLIENT, eventData)
 
+
 def NotifyToServer(methodName, eventData):
     # type: (str, dict) -> 'None'
     """
@@ -123,6 +131,7 @@ def NotifyToServer(methodName, eventData):
     from client.NotifyClient import NotifyClient
     eventData[NotifyManage.EVENT_METHOD_NAME] = methodName
     NotifyClient.getSystem().NotifyToServer(NotifyManage.CLIENT_TO_SERVER, eventData)
+
 
 def NotifyFromClientToClient(targetId, methodName, eventData):
     # type: (str | list[str], str, dict) -> 'None'
@@ -142,3 +151,34 @@ def NotifyFromClientToClient(targetId, methodName, eventData):
         targetIdList = [targetIdList]
     eventData[NotifyManage.EVENT_ID_LIST] = targetIdList
     NotifyClient.getSystem().NotifyToServer(NotifyManage.CLIENT_TO_CLIENT, eventData)
+
+
+def Controller(cls):
+    system = None
+    if clientApi.GetLevelId():
+        from client.NotifyClient import NotifyClient
+        system = NotifyClient.getSystem()
+    else:
+        from server.NotifyServer import NotifyServer
+        system = NotifyServer.getSystem()
+
+    # 记录原本的方法
+    origInit = cls.__init__
+    origDel = None
+
+    # 类有 Destroy 方法
+    if hasattr(cls, 'Destroy') and callable(getattr(cls, 'Destroy')):
+        origDel = cls.Destroy
+
+    def newInit(self, *args, **kwargs):
+        ListenEvent.listenEvent(cls, system, self)
+        origInit(self, *args, **kwargs)
+
+    def newDel(self, *args, **kwargs):
+        ListenEvent.unListenEvent(cls, system, self)
+        if origDel:
+            origDel(self, *args, **kwargs)
+
+    cls.__init__ = newInit
+    cls.Destroy = newDel
+    return cls
