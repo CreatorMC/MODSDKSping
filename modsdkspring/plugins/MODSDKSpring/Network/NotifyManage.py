@@ -155,7 +155,7 @@ def NotifyFromClientToClient(targetId, methodName, eventData):
 
 def Controller(cls):
     system = None
-    if clientApi.GetLevelId():
+    if clientApi.GetLevelId():  # TODO 错误写法，不兼容山头
         from client.NotifyClient import NotifyClient
         system = NotifyClient.getSystem()
     else:
