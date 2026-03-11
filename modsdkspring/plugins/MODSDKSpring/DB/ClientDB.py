@@ -19,25 +19,22 @@ class ClientDB(BaseDB):
 
     def _set(self, dto):
         # type: (DBDTO) -> bool
-        # TODO 客户端需要检查版本吗？
+        # TODO 客户端需要检查版本吗？经测试，网易提供的 api 似乎保证了请求和回调的顺序，理论上讲不用检查版本。但为了保险起见以及优化性能，还是检查一下版本吧。
         result = self.set(dto.key, dto.parseToDict(), False)
 
         # 借由通信系统发送本地广播事件，通知该 MOD 内的数据变化
         NotifyClient.getSystem().BroadcastEvent(DB_CHANGE_EVENT, dto.value)
         return result
 
-    def _get(self, key):
+    def _get(self, key, uid):
+        """
+        因为这里直接取的本地数据，用本地数据构造 dto，所以在服务端还没有返回给客户端的时候，客户端此时对数据的任何操作，均无效（客户端取的 version 均未改变）
+        """
         tempDict = self.get(key, False)
         if tempDict is None:
             tempDict = {}
         tempDict[DBDTO.KEY] = key
-        return DBDTO.parseToObject(tempDict)
-
-    def _getDTO(self, key, uid):
-        """
-        因为这里直接取的本地数据，用本地数据构造 dto，所以在服务端还没有返回给客户端的时候，客户端此时对数据的任何操作，均无效
-        """
-        dto = self._get(key)
+        dto = DBDTO.parseToObject(tempDict)
         dto.uid = str(uid)
         return dto
 
@@ -59,7 +56,7 @@ class ClientDB(BaseDB):
         if value is None:
             value = {}
 
-        dto = self._getDTO(key, uid)
+        dto = self._get(key, uid)
         dto.value = value
         self._pushAndSendDTO(dto)
 
@@ -79,7 +76,7 @@ class ClientDB(BaseDB):
         # type: (str, str, any, '(str | int)') -> None
         """
         更新 key 对应数据中的 subkey 对应的数据
-        key: 标识符
+        key: 标识符。如果没有，则自动添加
         subkey: key 对应数据中的子键。如果没有，则自动添加
         value: 更新的数据
         uid: 玩家 UID，当更新的数据是玩家私有数据时需要设置
@@ -104,7 +101,7 @@ class ClientDB(BaseDB):
 
         如果 key 对应的数据过多，且需要频繁的更新 subkey 对应的数据，建议在业务层面将 subkey 提升为 key，以提高效率
         """
-        dto = self._getDTO(key, uid)
+        dto = self._get(key, uid)
         dto.value[subkey] = value
         self._pushAndSendDTO(dto)
 
@@ -113,8 +110,9 @@ class ClientDB(BaseDB):
         """
         查询 key 对应的数据
         key: 标识符
+        备注：数据不存在时会返回空字典：{}
         """
-        dto = self._getDTO(key, '')
+        dto = self._get(key, '')
         return dto.value
 
 
