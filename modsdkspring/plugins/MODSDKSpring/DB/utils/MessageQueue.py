@@ -45,3 +45,10 @@ class MessageQueue(object):
 
         dbDTO = MessageQueue.__queueDict[key][0]
         return dbDTO
+
+    @staticmethod
+    def isEmpty():
+        """
+        获取队列是否为空
+        """
+        return len(MessageQueue.__queueDict) == 0

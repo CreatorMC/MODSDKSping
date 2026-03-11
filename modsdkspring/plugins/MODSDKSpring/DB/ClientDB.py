@@ -13,14 +13,24 @@ class ClientDB(BaseDB):
 
     def __init__(self):
         super(ClientDB, self).__init__()
-        comp = clientApi.GetEngineCompFactory().CreateConfigClient(clientApi.GetLevelId())
+        factory = clientApi.GetEngineCompFactory()
+        levelId = clientApi.GetLevelId()
+
+        # 用于调用网易存储接口
+        comp = factory.CreateConfigClient(levelId)
         self.set = comp.SetConfigData
         self.get = comp.GetConfigData
 
+        # 用于超时重传
+        comp = factory.CreateGame(levelId)
+        self.addTimer = comp.AddTimer
+        self.cancelTimer = comp.CancelTimer
+        self.timer = None
+
     def _set(self, dto):
         # type: (DBDTO) -> bool
-        # TODO 客户端需要检查版本吗？经测试，网易提供的 api 似乎保证了请求和回调的顺序，理论上讲不用检查版本。但为了保险起见以及优化性能，还是检查一下版本吧。
-        result = self.set(dto.key, dto.parseToDict(), False)
+        # 客户端不需要检查版本（由网易接口保证服务端发到客户端的顺序性，服务端发过来的，一定是最新的）
+        result = self.set(dto.key, dto.parseToSave(), False)
 
         # 借由通信系统发送本地广播事件，通知该 MOD 内的数据变化
         NotifyClient.getSystem().BroadcastEvent(DB_CHANGE_EVENT, dto.value)
@@ -40,8 +50,11 @@ class ClientDB(BaseDB):
 
     # noinspection PyMethodMayBeStatic
     def _pushAndSendDTO(self, dto):
+        isEmpty = MessageQueue.isEmpty()
         MessageQueue.push(dto)
-        _sendDBMessage(dto.key)
+        if isEmpty:
+            # 只有之前是空队列，才会发送请求到服务端，避免重复发送
+            _sendDBMessage(dto.key)
 
     def insert(self, key, value, uid=''):
         # type: (str, '(dict | None)', '(str | int)') -> None
@@ -58,6 +71,7 @@ class ClientDB(BaseDB):
 
         dto = self._get(key, uid)
         dto.value = value
+        dto.operation = DBDTO.INSERT
         self._pushAndSendDTO(dto)
 
     def delete(self, key, uid=''):
@@ -70,7 +84,10 @@ class ClientDB(BaseDB):
         服务端会将 key 本身也删除
         玩家 UID 不要使用服务端接口 GetPlayerUid 获取，可能与客户端接口 getUid 获取的不一致
         """
-        self.insert(key, {}, uid)
+        dto = self._get(key, uid)
+        dto.value = {}
+        dto.operation = DBDTO.DELETE
+        self._pushAndSendDTO(dto)
 
     def update(self, key, subkey, value, uid=''):
         # type: (str, str, any, '(str | int)') -> None
@@ -103,6 +120,8 @@ class ClientDB(BaseDB):
         """
         dto = self._get(key, uid)
         dto.value[subkey] = value
+        dto.operation = DBDTO.UPDATE
+        dto.subkey = subkey
         self._pushAndSendDTO(dto)
 
     def select(self, key):
@@ -113,6 +132,7 @@ class ClientDB(BaseDB):
         备注：数据不存在时会返回空字典：{}
         """
         dto = self._get(key, '')
+        dto.operation = DBDTO.SELECT
         return dto.value
 
 
@@ -124,6 +144,11 @@ def _sendDBMessage(key):
     """
     从消息队列中取数据发送给服务端
     """
+    # 取消超时定时器
+    if clientDB.timer:
+        clientDB.cancelTimer(clientDB.timer)
+        clientDB.timer = None
+
     dto = MessageQueue.get(key)
     if dto:
         dtoDict = dto.parseToDict()
@@ -132,16 +157,27 @@ def _sendDBMessage(key):
             '_receiveClientDBMessage',
             dtoDict
         )
+        # 启动超时定时器，当请求超时时，尝试重新发送
+        clientDB.timer = clientDB.addTimer(10.0, _sendDBMessage, key)
 
 
 # noinspection PyProtectedMember
 @AllowNotify
 def _receiveServerDBMessage(event):
     """
-    接收服务端的数据更新回调
+    接收从客户端发到服务端的数据更新回调（从服务端发起的更新不调用此函数）
     """
     responseDTO = ResponseDTO.parseToObject(event)
-    dto = responseDTO.dto
-    MessageQueue.pop(dto.key)                                               # 从队列中弹出
-    clientDB._set(dto)                                                      # 更新数据到本地
-    _sendDBMessage(dto.key)                                                 # 继续从队列中取数据发送
+    newDTO = responseDTO.dto
+    oldDTO = MessageQueue.pop(newDTO.key)
+
+    if responseDTO.result:
+        # 服务端更新成功，客户端保存
+        clientDB._set(newDTO)
+    else:
+        # 服务端更新失败，客户端根据操作类型进行合并
+        oldDTO.mergeDTO(newDTO)
+        # 合并后重发请求
+        MessageQueue.push(oldDTO)
+
+    _sendDBMessage(newDTO.key)

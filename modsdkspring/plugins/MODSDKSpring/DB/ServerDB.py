@@ -41,7 +41,7 @@ class ServerDB(BaseDB):
 
     def _set(self, dto):
         # type: (DBDTO) -> 'tuple[bool, DBDTO]'
-        return self._change(dto, lambda k, d: self.set(k, d.parseToDict(), True))
+        return self._change(dto, lambda k, d: self.set(k, d.parseToSave(), True))
 
     def _get(self, key, uid):
         # type: (str, str) -> 'DBDTO'
