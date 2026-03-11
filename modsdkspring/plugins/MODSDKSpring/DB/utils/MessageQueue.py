@@ -12,13 +12,25 @@ class MessageQueue(object):
     def push(dto):
         # type: (DBDTO) -> None
         """
-        向消息队列中添加数据
+        向消息队列中添加数据（添加到队尾）
         """
         key = dto.key
         if key not in MessageQueue.__queueDict:
             MessageQueue.__queueDict[key] = deque()
 
         MessageQueue.__queueDict[key].append(dto)
+
+    @staticmethod
+    def pushFront(dto):
+        # type: (DBDTO) -> None
+        """
+        向消息队列中添加数据（添加到队首）
+        """
+        key = dto.key
+        if key not in MessageQueue.__queueDict:
+            MessageQueue.__queueDict[key] = deque()
+
+        MessageQueue.__queueDict[key].appendleft(dto)
 
     @staticmethod
     def pop(key):
@@ -47,8 +59,9 @@ class MessageQueue(object):
         return dbDTO
 
     @staticmethod
-    def isEmpty():
+    def isEmpty(key):
         """
         获取队列是否为空
+        key: 标识符
         """
-        return len(MessageQueue.__queueDict) == 0
+        return key not in MessageQueue.__queueDict or len(MessageQueue.__queueDict[key]) == 0

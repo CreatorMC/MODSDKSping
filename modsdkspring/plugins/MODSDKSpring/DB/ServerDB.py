@@ -20,10 +20,10 @@ class ServerDB(BaseDB):
 
     def _change(self, dto, func):
         # type: (DBDTO, 'function') -> 'tuple[bool, DBDTO]'
-        oldDTO = self._get(dto.key, dto.uid)
+        nowDTO = self._get(dto.key, dto.uid)
 
         # 版本判断
-        if dto.version >= oldDTO.version:
+        if dto.version == nowDTO.version:
             dto.version += 1
 
             # 私有 key 拼接（不改变 dto 中的 key）
@@ -37,7 +37,7 @@ class ServerDB(BaseDB):
             NotifyServer.getSystem().BroadcastEvent(DB_CHANGE_EVENT, dto.value)
             return True, dto
 
-        return False, oldDTO
+        return False, nowDTO
 
     def _set(self, dto):
         # type: (DBDTO) -> 'tuple[bool, DBDTO]'
@@ -144,17 +144,21 @@ serverDB = ServerDB()
 def _sendDBMessage(result, newDTO, playerId):
     # type: (bool, 'DBDTO', str) -> None
     """
-    发送 DTO 给客户端
+    服务端主动更新，发送 DTO 给客户端
     """
+    # 从服务端更新都更新不成功，就没有必要与客户端通信了
+    if not result:
+        return
+
     if newDTO.uid:
+        # 如果存在 uid，说明是此玩家的私有数据，仅同步到此玩家的客户端
         if not playerId:
             logger.error("玩家 UID %s 对应的 playerId 缺失，请检查您传递的参数！", newDTO.uid)
             return
-        # 如果存在 uid，说明是此玩家的私有数据，仅同步到此玩家的客户端
-        NotifyToClient(playerId, '_receiveServerDBMessage', ResponseDTO(result, newDTO).parseToDict())
+        NotifyToClient(playerId, '_receiveFromServerDBMessage', ResponseDTO(result, newDTO, playerId).parseToDict())
     else:
         # 不存在 uid，同步到所有玩家的客户端
-        BroadcastToAllClient('_receiveServerDBMessage', ResponseDTO(result, newDTO).parseToDict())
+        BroadcastToAllClient('_receiveFromServerDBMessage', ResponseDTO(result, newDTO, playerId).parseToDict())
 
 
 # noinspection PyProtectedMember
@@ -166,4 +170,11 @@ def _receiveClientDBMessage(event):
     playerId = event['playerId']
     dto = DBDTO.parseToObject(event)
     result, newDTO = serverDB._set(dto)
-    _sendDBMessage(result, newDTO, playerId)
+
+    if newDTO.uid or (not result):
+        # 如果存在 uid，说明是此玩家的私有数据，仅同步到此玩家的客户端
+        # 如果服务端拒绝更新，仅回调此玩家的客户端，不广播到所有玩家客户端
+        NotifyToClient(playerId, '_receiveServerDBMessage', ResponseDTO(result, newDTO, playerId).parseToDict())
+    else:
+        # 不存在 uid，同步到所有玩家的客户端
+        BroadcastToAllClient('_receiveServerDBMessage', ResponseDTO(result, newDTO, playerId).parseToDict())

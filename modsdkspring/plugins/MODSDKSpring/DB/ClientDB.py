@@ -25,7 +25,8 @@ class ClientDB(BaseDB):
         comp = factory.CreateGame(levelId)
         self.addTimer = comp.AddTimer
         self.cancelTimer = comp.CancelTimer
-        self.timer = None
+        # 超时定时器按 key 管理
+        self.timerDict = {}
 
     def _set(self, dto):
         # type: (DBDTO) -> bool
@@ -50,7 +51,7 @@ class ClientDB(BaseDB):
 
     # noinspection PyMethodMayBeStatic
     def _pushAndSendDTO(self, dto):
-        isEmpty = MessageQueue.isEmpty()
+        isEmpty = MessageQueue.isEmpty(dto.key)
         MessageQueue.push(dto)
         if isEmpty:
             # 只有之前是空队列，才会发送请求到服务端，避免重复发送
@@ -145,9 +146,9 @@ def _sendDBMessage(key):
     从消息队列中取数据发送给服务端
     """
     # 取消超时定时器
-    if clientDB.timer:
-        clientDB.cancelTimer(clientDB.timer)
-        clientDB.timer = None
+    if key in clientDB.timerDict and clientDB.timerDict[key]:
+        clientDB.cancelTimer(clientDB.timerDict[key])
+        del clientDB.timerDict[key]
 
     dto = MessageQueue.get(key)
     if dto:
@@ -158,7 +159,7 @@ def _sendDBMessage(key):
             dtoDict
         )
         # 启动超时定时器，当请求超时时，尝试重新发送
-        clientDB.timer = clientDB.addTimer(10.0, _sendDBMessage, key)
+        clientDB.timerDict[key] = clientDB.addTimer(10.0, _sendDBMessage, key)
 
 
 # noinspection PyProtectedMember
@@ -168,6 +169,11 @@ def _receiveServerDBMessage(event):
     接收从客户端发到服务端的数据更新回调（从服务端发起的更新不调用此函数）
     """
     responseDTO = ResponseDTO.parseToObject(event)
+    if responseDTO.playerId != clientApi.GetLocalPlayerId():
+        # 如果不是当前玩家发送的请求回调，则调用另一个函数
+        _receiveFromServerDBMessage(event)
+        return
+
     newDTO = responseDTO.dto
     oldDTO = MessageQueue.pop(newDTO.key)
 
@@ -177,7 +183,21 @@ def _receiveServerDBMessage(event):
     else:
         # 服务端更新失败，客户端根据操作类型进行合并
         oldDTO.mergeDTO(newDTO)
-        # 合并后重发请求
-        MessageQueue.push(oldDTO)
+        # 合并后重发请求（放入队首，避免操作顺序问题）
+        MessageQueue.pushFront(oldDTO)
 
+    # 继续从队列中取数据发送
     _sendDBMessage(newDTO.key)
+
+
+# noinspection PyProtectedMember
+@AllowNotify
+def _receiveFromServerDBMessage(event):
+    """
+    接收从服务端发起的更新
+    """
+    responseDTO = ResponseDTO.parseToObject(event)
+
+    # 服务端更新成功，客户端直接存储，服务端更新失败则客户端直接丢弃
+    if responseDTO.result:
+        clientDB._set(responseDTO.dto)
