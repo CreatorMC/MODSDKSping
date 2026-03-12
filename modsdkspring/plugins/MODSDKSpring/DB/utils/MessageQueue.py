@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import uuid
 from collections import deque
 
 from ..dto.DBDTO import DBDTO
@@ -18,6 +19,7 @@ class MessageQueue(object):
         if key not in MessageQueue.__queueDict:
             MessageQueue.__queueDict[key] = deque()
 
+        dto.requestId = MessageQueue.genRequestId()
         MessageQueue.__queueDict[key].append(dto)
 
     @staticmethod
@@ -30,6 +32,7 @@ class MessageQueue(object):
         if key not in MessageQueue.__queueDict:
             MessageQueue.__queueDict[key] = deque()
 
+        dto.requestId = MessageQueue.genRequestId()
         MessageQueue.__queueDict[key].appendleft(dto)
 
     @staticmethod
@@ -65,3 +68,10 @@ class MessageQueue(object):
         key: 标识符
         """
         return key not in MessageQueue.__queueDict or len(MessageQueue.__queueDict[key]) == 0
+
+    @staticmethod
+    def genRequestId():
+        """
+        生成请求 ID
+        """
+        return uuid.uuid4().hex

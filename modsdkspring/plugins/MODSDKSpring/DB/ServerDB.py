@@ -198,6 +198,7 @@ def _receiveClientDBMessage(event):
     playerId = event['playerId']
     dto = DBDTO.parseToObject(event)
     result, newDTO = serverDB._set(dto)
+    newDTO.requestId = dto.requestId
 
     if newDTO.uid or (not result):
         # 如果存在 uid，说明是此玩家的私有数据，仅同步到此玩家的客户端

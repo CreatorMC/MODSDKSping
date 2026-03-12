@@ -26,6 +26,7 @@ class DBDTO(object):
         # 非持久化字段
         self.operation = operation              # 操作标识，用于服务端拒绝更新时的客户端操作判断
         self.subkey = ''                        # UPDATE 操作时保存的子键
+        self.requestId = ''                     # 请求 ID，用于对应消息队列中的请求
 
     def mergeDTO(self, newDTO):
         # type: ('DBDTO') -> None
@@ -52,7 +53,8 @@ class DBDTO(object):
             DBDTO.VERSION: self.version,
             DBDTO.UID: self.uid,
             'operation': self.operation,
-            'subkey': self.subkey
+            'subkey': self.subkey,
+            'requestId': self.requestId
         }
 
     def parseToSave(self):
@@ -76,6 +78,8 @@ class DBDTO(object):
         uid = tempDict.get(DBDTO.UID, '')
         operation = tempDict.get('operation', DBDTO.SELECT)
         subkey = tempDict.get('subkey', '')
+        requestId = tempDict.get('requestId', '')
         dto = DBDTO(key, value, version, uid, operation)
         dto.subkey = subkey
+        dto.requestId = requestId
         return dto

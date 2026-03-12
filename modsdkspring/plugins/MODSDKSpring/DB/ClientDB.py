@@ -206,7 +206,13 @@ def _receiveServerDBMessage(event):
         return
 
     newDTO = responseDTO.dto
-    oldDTO = MessageQueue.pop(newDTO.key)
+    oldDTO = MessageQueue.get(newDTO.key)
+
+    # 请求 id 不相等，说明是超时重发，发多了的，直接忽略
+    if oldDTO and oldDTO.requestId != newDTO.requestId:
+        return
+
+    MessageQueue.pop(newDTO.key)
 
     if responseDTO.result:
         # 服务端更新成功，客户端保存
