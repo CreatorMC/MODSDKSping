@@ -39,7 +39,10 @@ class ClientDB(BaseDB):
         result = self.set(dto.key, dto.parseToSave(), False)
 
         # 借由通信系统发送本地广播事件，通知该 MOD 内的数据变化
-        NotifyClient.getSystem().BroadcastEvent(DB_CHANGE_EVENT, dto.value)
+        NotifyClient.getSystem().BroadcastEvent(DB_CHANGE_EVENT, {
+            'key': dto.key,
+            'value': dto.value
+        })
         return result
 
     def _get(self, key, uid):
