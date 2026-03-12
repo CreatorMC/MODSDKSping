@@ -18,3 +18,6 @@ class BaseDB(object):
 
     def select(self, *args, **kwargs):
         pass
+
+    def subscribe(self, *args, **kwargs):
+        pass

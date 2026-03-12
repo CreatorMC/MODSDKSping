@@ -3,6 +3,7 @@ import mod.server.extraServerApi as serverApi
 
 from .BaseDB import BaseDB, DB_CHANGE_EVENT
 from .dto.DBDTO import DBDTO
+from .dto.ResponseBatchDTO import ResponseBatchDTO
 from .dto.ResponseDTO import ResponseDTO
 from ..Network.NotifyManage import AllowNotify, NotifyToClient, BroadcastToAllClient
 from ..Network.server.NotifyServer import NotifyServer
@@ -17,6 +18,11 @@ class ServerDB(BaseDB):
         self.set = comp.SetExtraData
         self.get = comp.GetExtraData
         self.clean = comp.CleanExtraData
+        self.getWholeExtraData = comp.GetWholeExtraData
+
+        # 订阅的 key
+        self._subscribe = ''
+        NotifyServer.getSystem().ListenForEvent(serverApi.GetEngineNamespace(), serverApi.GetEngineSystemName(), "ClientLoadAddonsFinishServerEvent", self, self.ClientLoadAddonsFinishServerEvent, 10)
 
     def _change(self, dto, func):
         # type: (DBDTO, 'function') -> 'tuple[bool, DBDTO]'
@@ -137,6 +143,35 @@ class ServerDB(BaseDB):
         dto = self._get(key, uid)
         return dto.value
 
+    def subscribe(self, preKey):
+        # type: (str) -> None
+        """
+        服务端订阅数据
+        preKey: 订阅的 key 的前缀
+        备注：订阅后，在有玩家进入时，服务端会在 ClientLoadAddonsFinishServerEvent 事件中，自动将前缀为 preKey 的 key 对应的非玩家私有数据发送给玩家
+        订阅的数据必须为使用 insert、delete、update 方法保存的数据，否则将会引发错误
+        推荐在服务端系统调用 __init__ 方法时进行订阅
+        """
+        self._subscribe = preKey
+
+    def ClientLoadAddonsFinishServerEvent(self, event):
+        """
+        触发时机：客户端mod加载完成时，服务端触发此事件。服务器可以使用此事件，往客户端发送数据给其初始化。
+        """
+        playerId = event['playerId']
+        if self._subscribe:
+            allDataDict = self.getWholeExtraData()
+            if allDataDict:
+                batch = []
+                for key, value in allDataDict.iteritems():
+                    if isinstance(key, basestring) and key.startswith(self._subscribe) and isinstance(value, dict) and DBDTO.KEY in value:
+                        dto = DBDTO.parseToObject(value)
+                        # 排除玩家私有数据
+                        if not dto.uid:
+                            batch.append(dto)
+                if batch:
+                    NotifyToClient(playerId, '_receiveFromServerBatchDBMessage', ResponseBatchDTO(True, batch, playerId).parseToDict())
+
 
 serverDB = ServerDB()
 
@@ -178,3 +213,25 @@ def _receiveClientDBMessage(event):
     else:
         # 不存在 uid，同步到所有玩家的客户端
         BroadcastToAllClient('_receiveServerDBMessage', ResponseDTO(result, newDTO, playerId).parseToDict())
+
+
+@AllowNotify
+def _receiveClientUIDDBMessage(event):
+    """
+    接收客户端进入时获取私有数据的请求
+    """
+    playerId = event['playerId']
+    uid = str(event['uid'])
+    preKey = event['_subscribe']
+    if preKey:
+        allDataDict = serverDB.getWholeExtraData()
+        if allDataDict:
+            batch = []
+            for key, value in allDataDict.iteritems():
+                if isinstance(key, basestring) and key.startswith(preKey) and isinstance(value, dict) and DBDTO.KEY in value:
+                    dto = DBDTO.parseToObject(value)
+                    # 只保留玩家私有数据
+                    if dto.uid == uid:
+                        batch.append(dto)
+            if batch:
+                NotifyToClient(playerId, '_receiveFromServerBatchDBMessage', ResponseBatchDTO(True, batch, playerId).parseToDict())

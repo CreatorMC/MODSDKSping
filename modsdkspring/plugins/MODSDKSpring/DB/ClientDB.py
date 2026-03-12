@@ -3,6 +3,7 @@ import mod.client.extraClientApi as clientApi
 
 from .BaseDB import BaseDB, DB_CHANGE_EVENT
 from .dto.DBDTO import DBDTO
+from .dto.ResponseBatchDTO import ResponseBatchDTO
 from .dto.ResponseDTO import ResponseDTO
 from .utils.MessageQueue import MessageQueue
 from ..Network.NotifyManage import NotifyToServer, AllowNotify
@@ -27,6 +28,10 @@ class ClientDB(BaseDB):
         self.cancelTimer = comp.CancelTimer
         # 超时定时器按 key 管理
         self.timerDict = {}
+
+        # 订阅的 key
+        self._subscribe = ''
+        NotifyClient.getSystem().ListenForEvent(clientApi.GetEngineNamespace(), clientApi.GetEngineSystemName(), "OnLocalPlayerStopLoading", self, self.OnLocalPlayerStopLoading, 10)
 
     def _set(self, dto):
         # type: (DBDTO) -> bool
@@ -136,6 +141,30 @@ class ClientDB(BaseDB):
         dto.operation = DBDTO.SELECT
         return dto.value
 
+    def subscribe(self, preKey):
+        # type: (str) -> None
+        """
+        客户端订阅数据
+        preKey: 订阅的 key 的前缀
+        备注：订阅后，客户端会在 OnLocalPlayerStopLoading 事件触发后，将 UID 发送至服务端，以获取玩家私有数据
+        订阅的数据必须为使用 insert、delete、update 方法保存的数据，否则将会引发错误
+        推荐在客户端系统调用 __init__ 方法时进行订阅
+        """
+        self._subscribe = preKey
+
+    def OnLocalPlayerStopLoading(self, event):
+        """
+        触发时机：玩家进入存档，出生点地形加载完成时触发。该事件触发时可以进行切换维度的操作。
+        """
+        playerId = event['playerId']
+        if playerId == clientApi.GetLocalPlayerId() and self._subscribe:
+            uid = clientApi.GetEngineCompFactory().CreatePlayer(playerId).getUid()
+            NotifyToServer("_receiveClientUIDDBMessage", {
+                'playerId': playerId,
+                'uid': str(uid),
+                '_subscribe': self._subscribe
+            })
+
 
 clientDB = ClientDB()
 
@@ -201,3 +230,16 @@ def _receiveFromServerDBMessage(event):
     # 服务端更新成功，客户端直接存储，服务端更新失败则客户端直接丢弃
     if responseDTO.result:
         clientDB._set(responseDTO.dto)
+
+
+# noinspection PyProtectedMember
+@AllowNotify
+def _receiveFromServerBatchDBMessage(event):
+    """
+    接收从服务端发起的批量更新（玩家刚进入存档时，服务端会调用）
+    """
+    responseBatchDTO = ResponseBatchDTO.parseToObject(event)
+
+    if responseBatchDTO.result:
+        for dto in responseBatchDTO.batch:
+            clientDB._set(dto)
