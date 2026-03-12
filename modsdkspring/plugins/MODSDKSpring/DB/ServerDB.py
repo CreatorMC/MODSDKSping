@@ -66,6 +66,9 @@ class ServerDB(BaseDB):
         备注：key 如果已存在，则为更新数据
         玩家 UID 不要使用服务端接口 GetPlayerUid 获取，可能与客户端接口 getUid 获取的不一致
         """
+        if value is None:
+            value = {}
+
         dto = self._get(key, uid)
         dto.value = value
         result, newDTO = self._set(dto)
