@@ -17,15 +17,14 @@ class ServerDB(BaseDB):
         comp = serverApi.GetEngineCompFactory().CreateExtraData(serverApi.GetLevelId())
         self.set = comp.SetExtraData
         self.get = comp.GetExtraData
-        self.clean = comp.CleanExtraData
         self.getWholeExtraData = comp.GetWholeExtraData
 
         # 订阅的 key
         self._subscribe = ''
         NotifyServer.getSystem().ListenForEvent(serverApi.GetEngineNamespace(), serverApi.GetEngineSystemName(), "ClientLoadAddonsFinishServerEvent", self, self.ClientLoadAddonsFinishServerEvent, 10)
 
-    def _change(self, dto, func):
-        # type: (DBDTO, 'function') -> 'tuple[bool, DBDTO]'
+    def _set(self, dto):
+        # type: (DBDTO) -> 'tuple[bool, DBDTO]'
         nowDTO = self._get(dto.key, dto.uid)
 
         # 版本判断
@@ -37,17 +36,13 @@ class ServerDB(BaseDB):
             if dto.uid:
                 key = dto.key + dto.uid
 
-            func(key, dto)
+            self.set(key, dto.parseToSave(), True)
 
             # 借由通信系统发送本地广播事件，通知该 MOD 内的数据变化
             NotifyServer.getSystem().BroadcastEvent(DB_CHANGE_EVENT, dto.value)
             return True, dto
 
         return False, nowDTO
-
-    def _set(self, dto):
-        # type: (DBDTO) -> 'tuple[bool, DBDTO]'
-        return self._change(dto, lambda k, d: self.set(k, d.parseToSave(), True))
 
     def _get(self, key, uid):
         # type: (str, str) -> 'DBDTO'
@@ -59,10 +54,6 @@ class ServerDB(BaseDB):
         dto = DBDTO.parseToObject(tempDict)
         dto.uid = uid
         return dto
-
-    def _clean(self, dto):
-        # type: (DBDTO) -> 'tuple[bool, DBDTO]'
-        return self._change(dto, lambda k, d: self.clean(k))
 
     def insert(self, key, value, uid='', playerId=''):
         # type: (str, '(dict | None)', '(str | int)', str) -> None
@@ -87,14 +78,10 @@ class ServerDB(BaseDB):
         key: 标识符
         uid: 玩家 UID，当删除的数据是玩家私有数据时需要设置
         playerId: 玩家 playerId，当插入的数据是玩家私有数据时需要设置
-        备注：受限于网易接口，客户端只能做到将 key 对应的数据清空为 {}，key 本身依然存在
-        服务端会将 key 本身也删除
+        备注：为了保证删除操作也能同步到客户端，服务端数据只会清空为 {}，key 本身不删除
         玩家 UID 不要使用服务端接口 GetPlayerUid 获取，可能与客户端接口 getUid 获取的不一致
         """
-        dto = self._get(key, uid)
-        dto.value = {}
-        result, newDTO = self._clean(dto)
-        _sendDBMessage(result, newDTO, playerId)
+        self.insert(key, {}, uid, playerId)
 
     def update(self, key, subkey, value, uid='', playerId=''):
         # type: (str, str, any, '(str | int)', str) -> None

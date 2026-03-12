@@ -87,7 +87,6 @@ class ClientDB(BaseDB):
         key: 标识符
         uid: 玩家 UID，当删除的数据是玩家私有数据时需要设置
         备注：受限于网易接口，客户端只能做到将 key 对应的数据清空为 {}，key 本身依然存在
-        服务端会将 key 本身也删除
         玩家 UID 不要使用服务端接口 GetPlayerUid 获取，可能与客户端接口 getUid 获取的不一致
         """
         dto = self._get(key, uid)
@@ -209,7 +208,7 @@ def _receiveServerDBMessage(event):
     if responseDTO.result:
         # 服务端更新成功，客户端保存
         clientDB._set(newDTO)
-    else:
+    elif oldDTO:
         # 服务端更新失败，客户端根据操作类型进行合并
         oldDTO.mergeDTO(newDTO)
         # 合并后重发请求（放入队首，避免操作顺序问题）
