@@ -35,12 +35,15 @@ class ClientDB(BaseDB):
 
     def _set(self, dto):
         # type: (DBDTO) -> bool
+        # 客户端也要拼接 UID，以实现全局数据和私有数据的同名键共存
+        key = dto.key + dto.uid
+
         # 客户端不需要检查版本（由网易接口保证服务端发到客户端的顺序性，服务端发过来的，一定是最新的）
-        result = self.set(dto.key, dto.parseToSave(), False)
+        result = self.set(key, dto.parseToSave(), False)
 
         # 借由通信系统发送本地广播事件，通知该 MOD 内的数据变化
         NotifyClient.getSystem().BroadcastEvent(DB_CHANGE_EVENT, {
-            'key': dto.key,
+            'key': key,             # 拼接 UID 后的真实的 key
             'value': dto.value
         })
         return result
@@ -49,12 +52,13 @@ class ClientDB(BaseDB):
         """
         因为这里直接取的本地数据，用本地数据构造 dto，所以在服务端还没有返回给客户端的时候，客户端此时对数据的任何操作，均无效（客户端取的 version 均未改变）
         """
-        tempDict = self.get(key, False)
+        uid = str(uid)
+        tempDict = self.get(key + uid, False)
         if tempDict is None:
             tempDict = {}
         tempDict[DBDTO.KEY] = key
         dto = DBDTO.parseToObject(tempDict)
-        dto.uid = str(uid)
+        dto.uid = uid
         return dto
 
     # noinspection PyMethodMayBeStatic
@@ -132,14 +136,16 @@ class ClientDB(BaseDB):
         dto.subkey = subkey
         self._pushAndSendDTO(dto)
 
-    def select(self, key):
-        # type: (str) -> dict
+    def select(self, key, uid=''):
+        # type: (str, '(str | int)') -> dict
         """
         查询 key 对应的数据
         key: 标识符
-        备注：数据不存在时会返回空字典：{}
+        uid: 玩家 UID，当查询的数据是玩家私有数据时需要设置
+        备注：玩家 UID 不要使用服务端接口 GetPlayerUid 获取，可能与客户端接口 getUid 获取的不一致
+        数据不存在时会返回空字典：{}
         """
-        dto = self._get(key, '')
+        dto = self._get(key, uid)
         dto.operation = DBDTO.SELECT
         return dto.value
 
