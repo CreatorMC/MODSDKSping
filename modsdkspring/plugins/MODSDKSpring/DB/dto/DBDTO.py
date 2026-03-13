@@ -16,6 +16,9 @@ class DBDTO(object):
     UPDATE = 2      # 改
     SELECT = 3      # 查
 
+    # 优化内存
+    __slots__ = ["key", "value", "version", "uid", "operation", "subkey", "requestId"]
+
     def __init__(self, key, value, version, uid, operation=SELECT):
         # type: (str, dict, int, str, int) -> None
         self.key = key                          # key
