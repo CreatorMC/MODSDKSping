@@ -196,7 +196,7 @@ def _sendDBMessage(key):
             dtoDict
         )
         # 启动超时定时器，当请求超时时，尝试重新发送
-        clientDB.timerDict[key] = clientDB.addTimer(10.0, _sendDBMessage, key)
+        clientDB.timerDict[key] = clientDB.addTimer(60.0, _sendDBMessage, key)
 
 
 # noinspection PyProtectedMember
