@@ -72,6 +72,10 @@ class ServerDB(BaseDB):
         if value is None:
             value = {}
 
+        # 确保在 uid 不为空的情况下，playerId 也不为空，反之亦然
+        if bool(uid) ^ bool(playerId):
+            return
+
         dto = self._get(key, uid)
         dto.value = value
         result, newDTO = self._set(dto)
@@ -119,6 +123,10 @@ class ServerDB(BaseDB):
 
         如果 key 对应的数据过多，且需要频繁的更新 subkey 对应的数据，建议在业务层面将 subkey 提升为 key，以提高效率
         """
+        # 确保在 uid 不为空的情况下，playerId 也不为空，反之亦然
+        if bool(uid) ^ bool(playerId):
+            return
+
         dto = self._get(key, uid)
         dto.value[subkey] = value
         result, newDTO = self._set(dto)
