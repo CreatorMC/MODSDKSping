@@ -38,13 +38,17 @@ class ClientDB(BaseDB):
         # 客户端也要拼接 UID，以实现全局数据和私有数据的同名键共存
         key = dto.key + dto.uid
 
+        # 获取修改前数据
+        nowDTO = self._get(dto.key, dto.uid)
+
         # 客户端不需要检查版本（由网易接口保证服务端发到客户端的顺序性，服务端发过来的，一定是最新的）
         result = self.set(key, dto.parseToSave(), False)
 
         # 借由通信系统发送本地广播事件，通知该 MOD 内的数据变化
         NotifyClient.getSystem().BroadcastEvent(DB_CHANGE_EVENT, {
             'key': key,             # 拼接 UID 后的真实的 key
-            'value': dto.value
+            'newValue': dto.value,
+            'oldValue': nowDTO.value
         })
         return result
 

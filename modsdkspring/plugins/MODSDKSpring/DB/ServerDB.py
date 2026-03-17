@@ -41,7 +41,8 @@ class ServerDB(BaseDB):
             # 借由通信系统发送本地广播事件，通知该 MOD 内的数据变化
             NotifyServer.getSystem().BroadcastEvent(DB_CHANGE_EVENT, {
                 'key': key,             # 拼接 UID 后的真实的 key
-                'value': dto.value
+                'newValue': dto.value,
+                'oldValue': nowDTO.value
             })
             return True, dto
 
