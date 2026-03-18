@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import json
+
 import mod.server.extraServerApi as serverApi
 
 from .BaseDB import BaseDB, DB_CHANGE_EVENT
@@ -8,6 +10,7 @@ from .dto.ResponseDTO import ResponseDTO
 from ..Network.NotifyManage import AllowNotify, NotifyToClient, BroadcastToAllClient
 from ..Network.server.NotifyServer import NotifyServer
 from ..core.log.Log import logger
+from ..utils.json.JSONUtil import JSONUtil
 
 
 class ServerDB(BaseDB):
@@ -36,7 +39,7 @@ class ServerDB(BaseDB):
             if dto.uid:
                 key = dto.key + dto.uid
 
-            self.set(key, dto.parseToSave(), True)
+            self.set(key, json.dumps(dto.parseToSave()), True)
 
             # 借由通信系统发送本地广播事件，通知该 MOD 内的数据变化
             NotifyServer.getSystem().BroadcastEvent(DB_CHANGE_EVENT, {
@@ -53,7 +56,8 @@ class ServerDB(BaseDB):
         uid = str(uid)
         tempDict = self.get(key + uid)
         if tempDict is None:
-            tempDict = {}
+            tempDict = '{}'
+        tempDict = JSONUtil.convertUnicodeToStr(json.loads(tempDict))
         tempDict[DBDTO.KEY] = key
         dto = DBDTO.parseToObject(tempDict)
         dto.uid = uid
