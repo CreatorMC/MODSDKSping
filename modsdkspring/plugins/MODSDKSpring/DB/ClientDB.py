@@ -17,6 +17,9 @@ class ClientDB(BaseDB):
         factory = clientApi.GetEngineCompFactory()
         levelId = clientApi.GetLevelId()
 
+        # 缓存的本地玩家 UID
+        self.uid = ''
+
         # 用于调用网易存储接口
         comp = factory.CreateConfigClient(levelId)
         self.set = comp.SetConfigData
@@ -31,7 +34,7 @@ class ClientDB(BaseDB):
 
         # 订阅的 key
         self._subscribe = ''
-        NotifyClient.getSystem().ListenForEvent(clientApi.GetEngineNamespace(), clientApi.GetEngineSystemName(), "OnLocalPlayerStopLoading", self, self.OnLocalPlayerStopLoading, 10)
+        NotifyClient.getSystem().ListenForEvent(clientApi.GetEngineNamespace(), clientApi.GetEngineSystemName(), "OnLocalPlayerStopLoading", self, self._onLocalPlayerStopLoading, 10)
 
     def _set(self, dto):
         # type: (DBDTO) -> bool
@@ -73,48 +76,45 @@ class ClientDB(BaseDB):
             # 只有之前是空队列，才会发送请求到服务端，避免重复发送
             _sendDBMessage(dto.key)
 
-    def insert(self, key, value, uid=''):
-        # type: (str, '(dict | None)', '(str | int)') -> None
+    def insert(self, key, value, isPrivate=False):
+        # type: (str, '(dict | None)', bool) -> None
         """
         插入数据
         key: 标识符
         value: 数据字典
-        uid: 玩家 UID，当插入的数据是玩家私有数据时需要设置
+        isPrivate: 是否为本地玩家的私有数据
         备注：key 如果已存在，则为更新数据
-        玩家 UID 不要使用服务端接口 GetPlayerUid 获取，可能与客户端接口 getUid 获取的不一致
         """
         if value is None:
             value = {}
 
-        dto = self._get(key, uid)
+        dto = self._get(key, self.getUID() if isPrivate else '')
         dto.value = value
         dto.operation = DBDTO.INSERT
         self._pushAndSendDTO(dto)
 
-    def delete(self, key, uid=''):
-        # type: (str, '(str | int)') -> None
+    def delete(self, key, isPrivate=False):
+        # type: (str, bool) -> None
         """
         删除数据
         key: 标识符
-        uid: 玩家 UID，当删除的数据是玩家私有数据时需要设置
+        isPrivate: 是否为本地玩家的私有数据
         备注：受限于网易接口，客户端只能做到将 key 对应的数据清空为 {}，key 本身依然存在
-        玩家 UID 不要使用服务端接口 GetPlayerUid 获取，可能与客户端接口 getUid 获取的不一致
         """
-        dto = self._get(key, uid)
+        dto = self._get(key, self.getUID() if isPrivate else '')
         dto.value = {}
         dto.operation = DBDTO.DELETE
         self._pushAndSendDTO(dto)
 
-    def update(self, key, subkey, value, uid=''):
-        # type: (str, str, any, '(str | int)') -> None
+    def update(self, key, subkey, value, isPrivate=False):
+        # type: (str, str, any, bool) -> None
         """
         更新 key 对应数据中的 subkey 对应的数据
         key: 标识符。如果没有，则自动添加
         subkey: key 对应数据中的子键。如果没有，则自动添加
         value: 更新的数据
-        uid: 玩家 UID，当更新的数据是玩家私有数据时需要设置
-        备注：玩家 UID 不要使用服务端接口 GetPlayerUid 获取，可能与客户端接口 getUid 获取的不一致
-        当你用 key 存储了以下格式的数据时：
+        isPrivate: 是否为本地玩家的私有数据
+        备注：当你用 key 存储了以下格式的数据时：
 
         ```python
         {
@@ -134,22 +134,21 @@ class ClientDB(BaseDB):
 
         如果 key 对应的数据过多，且需要频繁的更新 subkey 对应的数据，建议在业务层面将 subkey 提升为 key，以提高效率
         """
-        dto = self._get(key, uid)
+        dto = self._get(key, self.getUID() if isPrivate else '')
         dto.value[subkey] = value
         dto.operation = DBDTO.UPDATE
         dto.subkey = subkey
         self._pushAndSendDTO(dto)
 
-    def select(self, key, uid=''):
-        # type: (str, '(str | int)') -> dict
+    def select(self, key, isPrivate=False):
+        # type: (str, bool) -> dict
         """
         查询 key 对应的数据
         key: 标识符
-        uid: 玩家 UID，当查询的数据是玩家私有数据时需要设置
-        备注：玩家 UID 不要使用服务端接口 GetPlayerUid 获取，可能与客户端接口 getUid 获取的不一致
-        数据不存在时会返回空字典：{}
+        isPrivate: 是否为本地玩家的私有数据
+        备注：数据不存在时会返回空字典：{}
         """
-        dto = self._get(key, uid)
+        dto = self._get(key, self.getUID() if isPrivate else '')
         dto.operation = DBDTO.SELECT
         return dto.value
 
@@ -158,24 +157,40 @@ class ClientDB(BaseDB):
         """
         客户端订阅数据
         preKey: 订阅的 key 的前缀
-        备注：订阅后，客户端会在 OnLocalPlayerStopLoading 事件触发后，将 UID 发送至服务端，以获取玩家私有数据
+        备注：订阅后，客户端会在 OnLocalPlayerStopLoading 事件触发后，将本地玩家的 UID 发送至服务端，以获取玩家私有数据
         订阅的数据必须为使用 insert、delete、update 方法保存的数据，否则将会引发错误
         推荐在客户端系统调用 __init__ 方法时进行订阅
         """
         self._subscribe = preKey
 
-    def OnLocalPlayerStopLoading(self, event):
+    def getUID(self):
+        # type: () -> str
+        """
+        获取本地用户的 UID
+        """
+        if self.uid and self.uid != '0':
+            return self.uid
+
+        uid = clientApi.GetEngineCompFactory().CreatePlayer(clientApi.GetLocalPlayerId()).getUid()
+        if uid:
+            self.uid = str(uid)
+        else:
+            self.uid = '0'       # 离线情况下的用于测试的 UID
+        return self.uid
+
+    def _onLocalPlayerStopLoading(self, event):
         """
         触发时机：玩家进入存档，出生点地形加载完成时触发。该事件触发时可以进行切换维度的操作。
         """
         playerId = event['playerId']
-        if playerId == clientApi.GetLocalPlayerId() and self._subscribe:
-            uid = clientApi.GetEngineCompFactory().CreatePlayer(playerId).getUid()
-            NotifyToServer("_receiveClientUIDDBMessage", {
-                'playerId': playerId,
-                'uid': str(uid),
-                '_subscribe': self._subscribe
-            })
+        if playerId == clientApi.GetLocalPlayerId():
+            uid = self.getUID()
+            if self._subscribe:
+                NotifyToServer("_receiveClientUIDDBMessage", {
+                    'playerId': playerId,
+                    'uid': str(uid),
+                    '_subscribe': self._subscribe
+                })
 
 
 clientDB = ClientDB()
