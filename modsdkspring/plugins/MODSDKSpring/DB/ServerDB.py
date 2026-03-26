@@ -170,8 +170,8 @@ class ServerDB(BaseDB):
             if allDataDict:
                 batch = []
                 for key, value in allDataDict.iteritems():
-                    if isinstance(key, basestring) and key.startswith(self._subscribe) and isinstance(value, dict) and DBDTO.KEY in value:
-                        dto = DBDTO.parseToObject(value)
+                    if isinstance(key, basestring) and key.startswith(self._subscribe) and isinstance(value, basestring) and DBDTO.KEY in value:
+                        dto = DBDTO.parseToObject(JSONUtil.convertUnicodeToStr(json.loads(value)))
                         # 排除玩家私有数据
                         if not dto.uid:
                             batch.append(dto)
@@ -235,8 +235,8 @@ def _receiveClientUIDDBMessage(event):
         if allDataDict:
             batch = []
             for key, value in allDataDict.iteritems():
-                if isinstance(key, basestring) and key.startswith(preKey) and isinstance(value, dict) and DBDTO.KEY in value:
-                    dto = DBDTO.parseToObject(value)
+                if isinstance(key, basestring) and key.startswith(preKey) and isinstance(value, basestring) and DBDTO.KEY in value:
+                    dto = DBDTO.parseToObject(JSONUtil.convertUnicodeToStr(json.loads(value)))
                     # 只保留玩家私有数据
                     if dto.uid == uid:
                         batch.append(dto)
