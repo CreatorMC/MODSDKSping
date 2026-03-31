@@ -26,9 +26,10 @@ class ServerDB(BaseDB):
         self._subscribe = ''
         NotifyServer.getSystem().ListenForEvent(serverApi.GetEngineNamespace(), serverApi.GetEngineSystemName(), "ClientLoadAddonsFinishServerEvent", self, self.ClientLoadAddonsFinishServerEvent, 10)
 
-    def _set(self, dto):
-        # type: (DBDTO) -> 'tuple[bool, DBDTO]'
-        nowDTO = self._get(dto.key, dto.uid)
+    def _set(self, dto, nowDTO=None):
+        # type: (DBDTO, DBDTO) -> 'tuple[bool, DBDTO]'
+        if nowDTO is None:
+            nowDTO = self._get(dto.key, dto.uid)
 
         # 版本判断
         if dto.version == nowDTO.version:
@@ -81,9 +82,10 @@ class ServerDB(BaseDB):
         if bool(uid) ^ bool(playerId):
             return
 
-        dto = self._get(key, uid)
+        nowDTO = self._get(key, uid)
+        dto = DBDTO.parseToObject(nowDTO.parseToDict())
         dto.value = value
-        result, newDTO = self._set(dto)
+        result, newDTO = self._set(dto, nowDTO)
         _sendDBMessage(result, newDTO, playerId)
 
     def delete(self, key, uid='', playerId=''):
@@ -132,9 +134,10 @@ class ServerDB(BaseDB):
         if bool(uid) ^ bool(playerId):
             return
 
-        dto = self._get(key, uid)
+        nowDTO = self._get(key, uid)
+        dto = DBDTO.parseToObject(nowDTO.parseToDict())
         dto.value[subkey] = value
-        result, newDTO = self._set(dto)
+        result, newDTO = self._set(dto, nowDTO)
         _sendDBMessage(result, newDTO, playerId)
 
     def select(self, key, uid=''):
