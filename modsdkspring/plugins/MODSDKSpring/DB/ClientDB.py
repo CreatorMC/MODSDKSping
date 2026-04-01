@@ -51,7 +51,8 @@ class ClientDB(BaseDB):
         NotifyClient.getSystem().BroadcastEvent(DB_CHANGE_EVENT, {
             'key': key,             # 拼接 UID 后的真实的 key
             'newValue': dto.value,
-            'oldValue': nowDTO.value
+            'oldValue': nowDTO.value,
+            'extraValue': dto.extraValue
         })
         return result
 
@@ -76,13 +77,14 @@ class ClientDB(BaseDB):
             # 只有之前是空队列，才会发送请求到服务端，避免重复发送
             _sendDBMessage(dto.key)
 
-    def insert(self, key, value, isPrivate=False):
-        # type: (str, '(dict | None)', bool) -> None
+    def insert(self, key, value, isPrivate=False, extraValue=None):
+        # type: (str, '(dict | None)', bool, dict) -> None
         """
         插入数据
         key: 标识符
         value: 数据字典
         isPrivate: 是否为本地玩家的私有数据
+        extraValue: 额外的字典值，用于在事件回调中传递自定义的额外数据。此数据不会持久化保存
         备注：key 如果已存在，则为更新数据
         """
         if value is None:
@@ -91,29 +93,35 @@ class ClientDB(BaseDB):
         dto = self._get(key, self.getUID() if isPrivate else '')
         dto.value = value
         dto.operation = DBDTO.INSERT
+        if isinstance(extraValue, dict):
+            dto.extraValue = extraValue
         self._pushAndSendDTO(dto)
 
-    def delete(self, key, isPrivate=False):
-        # type: (str, bool) -> None
+    def delete(self, key, isPrivate=False, extraValue=None):
+        # type: (str, bool, dict) -> None
         """
         删除数据
         key: 标识符
         isPrivate: 是否为本地玩家的私有数据
+        extraValue: 额外的字典值，用于在事件回调中传递自定义的额外数据。此数据不会持久化保存
         备注：受限于网易接口，客户端只能做到将 key 对应的数据清空为 {}，key 本身依然存在
         """
         dto = self._get(key, self.getUID() if isPrivate else '')
         dto.value = {}
         dto.operation = DBDTO.DELETE
+        if isinstance(extraValue, dict):
+            dto.extraValue = extraValue
         self._pushAndSendDTO(dto)
 
-    def update(self, key, subkey, value, isPrivate=False):
-        # type: (str, str, any, bool) -> None
+    def update(self, key, subkey, value, isPrivate=False, extraValue=None):
+        # type: (str, str, any, bool, dict) -> None
         """
         更新 key 对应数据中的 subkey 对应的数据
         key: 标识符。如果没有，则自动添加
         subkey: key 对应数据中的子键。如果没有，则自动添加
         value: 更新的数据
         isPrivate: 是否为本地玩家的私有数据
+        extraValue: 额外的字典值，用于在事件回调中传递自定义的额外数据。此数据不会持久化保存
         备注：当你用 key 存储了以下格式的数据时：
 
         ```python
@@ -138,6 +146,8 @@ class ClientDB(BaseDB):
         dto.value[subkey] = value
         dto.operation = DBDTO.UPDATE
         dto.subkey = subkey
+        if isinstance(extraValue, dict):
+            dto.extraValue = extraValue
         self._pushAndSendDTO(dto)
 
     def select(self, key, isPrivate=False):

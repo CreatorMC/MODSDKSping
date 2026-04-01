@@ -46,7 +46,8 @@ class ServerDB(BaseDB):
             NotifyServer.getSystem().BroadcastEvent(DB_CHANGE_EVENT, {
                 'key': key,             # 拼接 UID 后的真实的 key
                 'newValue': dto.value,
-                'oldValue': nowDTO.value
+                'oldValue': nowDTO.value,
+                'extraValue': dto.extraValue
             })
             return True, dto
 
@@ -64,14 +65,15 @@ class ServerDB(BaseDB):
         dto.uid = uid
         return dto
 
-    def insert(self, key, value, uid='', playerId=''):
-        # type: (str, '(dict | None)', '(str | int)', str) -> None
+    def insert(self, key, value, uid='', playerId='', extraValue=None):
+        # type: (str, '(dict | None)', '(str | int)', str, dict) -> None
         """
         插入数据
         key: 标识符
         value: 数据字典
         uid: 玩家 UID，当插入的数据是玩家私有数据时需要设置
         playerId: 玩家 playerId，当插入的数据是玩家私有数据时需要设置
+        extraValue: 额外的字典值，用于在事件回调中传递自定义的额外数据。此数据不会持久化保存
         备注：key 如果已存在，则为更新数据
         玩家 UID 不要使用服务端接口 GetPlayerUid 获取，可能与客户端接口 getUid 获取的不一致
         """
@@ -86,22 +88,25 @@ class ServerDB(BaseDB):
         dto = DBDTO.parseToObject(nowDTO.parseToDict())
         dto.value = value
         result, newDTO = self._set(dto, nowDTO)
+        if isinstance(extraValue, dict):
+            newDTO.extraValue = extraValue
         _sendDBMessage(result, newDTO, playerId)
 
-    def delete(self, key, uid='', playerId=''):
-        # type: (str, '(str | int)', str) -> None
+    def delete(self, key, uid='', playerId='', extraValue=None):
+        # type: (str, '(str | int)', str, dict) -> None
         """
         删除数据
         key: 标识符
         uid: 玩家 UID，当删除的数据是玩家私有数据时需要设置
         playerId: 玩家 playerId，当插入的数据是玩家私有数据时需要设置
+        extraValue: 额外的字典值，用于在事件回调中传递自定义的额外数据。此数据不会持久化保存
         备注：为了保证删除操作也能同步到客户端，服务端数据只会清空为 {}，key 本身不删除
         玩家 UID 不要使用服务端接口 GetPlayerUid 获取，可能与客户端接口 getUid 获取的不一致
         """
-        self.insert(key, {}, uid, playerId)
+        self.insert(key, {}, uid, playerId, extraValue)
 
-    def update(self, key, subkey, value, uid='', playerId=''):
-        # type: (str, str, any, '(str | int)', str) -> None
+    def update(self, key, subkey, value, uid='', playerId='', extraValue=None):
+        # type: (str, str, any, '(str | int)', str, dict) -> None
         """
         更新 key 对应数据中的 subkey 对应的数据
         key: 标识符。如果没有，则自动添加
@@ -109,6 +114,7 @@ class ServerDB(BaseDB):
         value: 更新的数据
         uid: 玩家 UID，当更新的数据是玩家私有数据时需要设置
         playerId: 玩家 playerId，当插入的数据是玩家私有数据时需要设置
+        extraValue: 额外的字典值，用于在事件回调中传递自定义的额外数据。此数据不会持久化保存
         备注：玩家 UID 不要使用服务端接口 GetPlayerUid 获取，可能与客户端接口 getUid 获取的不一致
         当你用 key 存储了以下格式的数据时：
 
@@ -138,6 +144,8 @@ class ServerDB(BaseDB):
         dto = DBDTO.parseToObject(nowDTO.parseToDict())
         dto.value[subkey] = value
         result, newDTO = self._set(dto, nowDTO)
+        if isinstance(extraValue, dict):
+            newDTO.extraValue = extraValue
         _sendDBMessage(result, newDTO, playerId)
 
     def select(self, key, uid=''):

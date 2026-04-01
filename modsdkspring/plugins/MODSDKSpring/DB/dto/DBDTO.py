@@ -17,7 +17,7 @@ class DBDTO(object):
     SELECT = 3      # 查
 
     # 优化内存
-    __slots__ = ["key", "value", "version", "uid", "operation", "subkey", "requestId"]
+    __slots__ = ["key", "value", "version", "uid", "operation", "subkey", "requestId", "extraValue"]
 
     def __init__(self, key, value, version, uid, operation=SELECT):
         # type: (str, dict, int, str, int) -> None
@@ -30,6 +30,7 @@ class DBDTO(object):
         self.operation = operation              # 操作标识，用于服务端拒绝更新时的客户端操作判断
         self.subkey = ''                        # UPDATE 操作时保存的子键
         self.requestId = ''                     # 请求 ID，用于对应消息队列中的请求
+        self.extraValue = {}                    # 额外的用于事件回调的自定义字典
 
     def mergeDTO(self, newDTO):
         # type: ('DBDTO') -> None
@@ -57,7 +58,8 @@ class DBDTO(object):
             DBDTO.UID: self.uid,
             'operation': self.operation,
             'subkey': self.subkey,
-            'requestId': self.requestId
+            'requestId': self.requestId,
+            'extraValue': self.extraValue
         }
 
     def parseToSave(self):
@@ -82,7 +84,9 @@ class DBDTO(object):
         operation = tempDict.get('operation', DBDTO.SELECT)
         subkey = tempDict.get('subkey', '')
         requestId = tempDict.get('requestId', '')
+        extraValue = tempDict.get('extraValue', {})
         dto = DBDTO(key, value, version, uid, operation)
         dto.subkey = subkey
         dto.requestId = requestId
+        dto.extraValue = extraValue
         return dto
