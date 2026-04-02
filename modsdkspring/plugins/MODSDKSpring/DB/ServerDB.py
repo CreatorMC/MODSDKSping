@@ -19,8 +19,12 @@ class ServerDB(BaseDB):
         super(ServerDB, self).__init__()
         comp = serverApi.GetEngineCompFactory().CreateExtraData(serverApi.GetLevelId())
         self.set = comp.SetExtraData
+        self.save = comp.SaveExtraData
         self.get = comp.GetExtraData
         self.getWholeExtraData = comp.GetWholeExtraData
+
+        # 用于订阅转换的钩子函数
+        self._hook = None
 
         # 订阅的 key
         self._subscribe = ''
@@ -57,11 +61,43 @@ class ServerDB(BaseDB):
         # type: (str, str) -> 'DBDTO'
         uid = str(uid)
         tempDict = self.get(key + uid)
+
+        # 确保 tempDict 是字典
         if tempDict is None:
-            tempDict = '{}'
-        tempDict = JSONUtil.convertUnicodeToStr(json.loads(tempDict))
-        tempDict[DBDTO.KEY] = key
-        dto = DBDTO.parseToObject(tempDict)
+            tempDict = {
+                DBDTO.VALUE: {}
+            }
+        elif isinstance(tempDict, basestring):
+            try:
+                tempDict = json.loads(tempDict)
+                if not isinstance(tempDict, dict):
+                    tempDict = {
+                        DBDTO.VALUE: tempDict
+                    }
+            except ValueError:
+                logger.warning("无效的 JSON, 自动将此字符串作为 DBDTO 的 value. key: %s, uid: %s, value: %s", key, uid, tempDict)
+                tempDict = {
+                    DBDTO.VALUE: tempDict
+                }
+        elif isinstance(tempDict, dict):
+            pass
+        else:
+            tempDict = {
+                DBDTO.VALUE: tempDict
+            }
+
+        tempDict = JSONUtil.convertUnicodeToStr(tempDict)
+        dto = None
+        if DBDTO.VALUE in tempDict:
+            tempDict[DBDTO.KEY] = key
+            dto = DBDTO.parseToObject(tempDict)
+        elif callable(self._hook):
+            dto = self._hook(self, key, tempDict, uid)
+
+        # 兜底检查
+        if dto is None:
+            dto = DBDTO(key, {}, 0, uid)
+
         dto.uid = uid
         return dto
 
@@ -171,6 +207,31 @@ class ServerDB(BaseDB):
         """
         self._subscribe = preKey
 
+    # noinspection PyMethodMayBeStatic
+    def _subscribeConvertHook(self, key, value, uid=''):
+        # type: ('ServerDB', str, any, str) -> '(DBDTO | None)'
+        """
+        默认的订阅数据钩子函数
+        """
+        if isinstance(value, dict):
+            return DBDTO(key, value, 0, uid)
+        elif isinstance(value, basestring):
+            return DBDTO(key, json.loads(value), 0, uid)
+        return None
+
+    def subscribeConvert(self, preKey, hook=_subscribeConvertHook):
+        """
+        服务端订阅数据并进行数据格式转换
+        适用于将已上线的未使用此框架处理的数据，纳入此框架的管理
+        preKey: 订阅的 key 的前缀
+        hook: 进行数据格式转换时使用的钩子函数
+        备注：订阅后，在有玩家进入时，服务端会在 ClientLoadAddonsFinishServerEvent 事件中，自动将前缀为 preKey 的 key 对应的非玩家私有数据发送给玩家
+        订阅的数据必须为使用 insert、delete、update 方法保存的数据，否则将会引发错误
+        推荐在服务端系统调用 __init__ 方法时进行订阅
+        """
+        self.subscribe(preKey)
+        self._hook = hook
+
     def ClientLoadAddonsFinishServerEvent(self, event):
         """
         触发时机：客户端mod加载完成时，服务端触发此事件。服务器可以使用此事件，往客户端发送数据给其初始化。
@@ -180,12 +241,24 @@ class ServerDB(BaseDB):
             allDataDict = self.getWholeExtraData()
             if allDataDict:
                 batch = []
+                isHook = False
                 for key, value in allDataDict.iteritems():
-                    if isinstance(key, basestring) and key.startswith(self._subscribe) and isinstance(value, basestring) and DBDTO.KEY in value:
-                        dto = DBDTO.parseToObject(JSONUtil.convertUnicodeToStr(json.loads(value)))
-                        # 排除玩家私有数据
-                        if not dto.uid:
-                            batch.append(dto)
+                    if isinstance(key, basestring) and key.startswith(self._subscribe):
+                        if isinstance(value, basestring) and DBDTO.KEY in value:
+                            dto = DBDTO.parseToObject(JSONUtil.convertUnicodeToStr(json.loads(value)))
+                            # 排除玩家私有数据
+                            if not dto.uid:
+                                batch.append(dto)
+                        elif callable(self._hook):
+                            dto = self._hook(self, key, value)
+                            if dto is not None and not dto.uid:
+                                batch.append(dto)
+                                self.set(key, json.dumps(dto.parseToSave()), False)
+                                isHook = True
+
+                if isHook:
+                    self.save()
+
                 if batch:
                     NotifyToClient(playerId, '_receiveFromServerBatchDBMessage', ResponseBatchDTO(True, batch, playerId).parseToDict())
 
@@ -233,6 +306,7 @@ def _receiveClientDBMessage(event):
         BroadcastToAllClient('_receiveServerDBMessage', ResponseDTO(result, newDTO, playerId).parseToDict())
 
 
+# noinspection PyProtectedMember
 @AllowNotify
 def _receiveClientUIDDBMessage(event):
     """
@@ -245,11 +319,26 @@ def _receiveClientUIDDBMessage(event):
         allDataDict = serverDB.getWholeExtraData()
         if allDataDict:
             batch = []
+            isHook = False
             for key, value in allDataDict.iteritems():
-                if isinstance(key, basestring) and key.startswith(preKey) and isinstance(value, basestring) and DBDTO.KEY in value:
-                    dto = DBDTO.parseToObject(JSONUtil.convertUnicodeToStr(json.loads(value)))
-                    # 只保留玩家私有数据
-                    if dto.uid == uid:
-                        batch.append(dto)
+                if isinstance(key, basestring) and key.startswith(preKey):
+                    if isinstance(value, basestring) and DBDTO.KEY in value:
+                        dto = DBDTO.parseToObject(JSONUtil.convertUnicodeToStr(json.loads(value)))
+                        # 只保留玩家私有数据
+                        if dto.uid == uid:
+                            batch.append(dto)
+                    elif callable(serverDB._hook):
+                        _key = key
+                        if key.endswith(uid):
+                            _key = key[:-len(uid)]
+                        dto = serverDB._hook(serverDB, _key, value, uid)
+                        if dto is not None and dto.uid == uid:
+                            batch.append(dto)
+                            serverDB.set(key, json.dumps(dto.parseToSave()), False)
+                            isHook = True
+
+            if isHook:
+                serverDB.save()
+
             if batch:
                 NotifyToClient(playerId, '_receiveFromServerBatchDBMessage', ResponseBatchDTO(True, batch, playerId).parseToDict())
