@@ -8,6 +8,7 @@ from .dto.ResponseDTO import ResponseDTO
 from .utils.MessageQueue import MessageQueue
 from ..Network.NotifyManage import NotifyToServer, AllowNotify
 from ..Network.client.NotifyClient import NotifyClient
+from ..core.log.Log import logger
 
 
 class ClientDB(BaseDB):
@@ -286,3 +287,4 @@ def _receiveFromServerBatchDBMessage(event):
     if responseBatchDTO.result:
         for dto in responseBatchDTO.batch:
             clientDB._set(dto)
+            logger.info("客户端收到同步数据 key: %s", dto.key)

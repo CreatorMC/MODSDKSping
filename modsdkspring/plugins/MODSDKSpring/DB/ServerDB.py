@@ -11,6 +11,7 @@ from ..Network.NotifyManage import AllowNotify, NotifyToClient, BroadcastToAllCl
 from ..Network.server.NotifyServer import NotifyServer
 from ..core.log.Log import logger
 from ..utils.json.JSONUtil import JSONUtil
+from ..utils.memory.MemoryUtil import MemoryUtil
 
 
 class ServerDB(BaseDB):
@@ -226,7 +227,7 @@ class ServerDB(BaseDB):
         preKey: 订阅的 key 的前缀
         hook: 进行数据格式转换时使用的钩子函数
         备注：订阅后，在有玩家进入时，服务端会在 ClientLoadAddonsFinishServerEvent 事件中，自动将前缀为 preKey 的 key 对应的非玩家私有数据发送给玩家
-        订阅的数据必须为使用 insert、delete、update 方法保存的数据，否则将会引发错误
+        订阅的数据如果不符合框架内部的数据存储格式，会调用 hook 函数进行转换，转换后会自动持久化保存
         推荐在服务端系统调用 __init__ 方法时进行订阅
         """
         self.subscribe(preKey)
@@ -256,10 +257,19 @@ class ServerDB(BaseDB):
                                 self.set(key, json.dumps(dto.parseToSave()), False)
                                 isHook = True
 
+                    # 优化，不让一个网络包过大（限制在 512 KB 多一点）
+                    memorySize = MemoryUtil.getMemorySize(batch)
+                    if memorySize >= 512 * 1024:
+                        logger.info("服务端发送同步共享数据大小: %s KB", memorySize / 1024.0)
+                        NotifyToClient(playerId, '_receiveFromServerBatchDBMessage', ResponseBatchDTO(True, batch, playerId).parseToDict())
+                        batch = []
+
                 if isHook:
                     self.save()
 
+                # 兜底
                 if batch:
+                    logger.info("服务端发送同步共享数据大小: %s KB", MemoryUtil.getMemorySize(batch) / 1024.0)
                     NotifyToClient(playerId, '_receiveFromServerBatchDBMessage', ResponseBatchDTO(True, batch, playerId).parseToDict())
 
 
@@ -337,8 +347,17 @@ def _receiveClientUIDDBMessage(event):
                             serverDB.set(key, json.dumps(dto.parseToSave()), False)
                             isHook = True
 
+                # 优化，不让一个网络包过大（限制在 512 KB 多一点）
+                memorySize = MemoryUtil.getMemorySize(batch)
+                if memorySize >= 512 * 1024:
+                    logger.info("服务端发送同步私有数据大小: %s KB", memorySize / 1024.0)
+                    NotifyToClient(playerId, '_receiveFromServerBatchDBMessage', ResponseBatchDTO(True, batch, playerId).parseToDict())
+                    batch = []
+
             if isHook:
                 serverDB.save()
 
+            # 兜底
             if batch:
+                logger.info("服务端发送同步私有数据大小: %s KB", MemoryUtil.getMemorySize(batch) / 1024.0)
                 NotifyToClient(playerId, '_receiveFromServerBatchDBMessage', ResponseBatchDTO(True, batch, playerId).parseToDict())
