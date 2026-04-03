@@ -287,4 +287,4 @@ def _receiveFromServerBatchDBMessage(event):
     if responseBatchDTO.result:
         for dto in responseBatchDTO.batch:
             clientDB._set(dto)
-            logger.info("客户端收到同步数据 key: %s", dto.key)
+            logger.info("客户端收到同步数据 key: %s", dto.key + dto.uid)
