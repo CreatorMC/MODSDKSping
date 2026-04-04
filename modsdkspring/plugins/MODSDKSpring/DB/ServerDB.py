@@ -15,7 +15,7 @@ from ..utils.memory.MemoryUtil import MemoryUtil
 
 
 class ServerDB(BaseDB):
-    
+
     def __init__(self):
         super(ServerDB, self).__init__()
         comp = serverApi.GetEngineCompFactory().CreateExtraData(serverApi.GetLevelId())
@@ -29,7 +29,8 @@ class ServerDB(BaseDB):
 
         # 订阅的 key
         self._subscribe = ''
-        NotifyServer.getSystem().ListenForEvent(serverApi.GetEngineNamespace(), serverApi.GetEngineSystemName(), "ClientLoadAddonsFinishServerEvent", self, self.ClientLoadAddonsFinishServerEvent, 10)
+        NotifyServer.getSystem().ListenForEvent(serverApi.GetEngineNamespace(), serverApi.GetEngineSystemName(), "ClientLoadAddonsFinishServerEvent", self,
+                                                self.ClientLoadAddonsFinishServerEvent, 10)
 
     def _set(self, dto, nowDTO=None):
         # type: (DBDTO, DBDTO) -> 'tuple[bool, DBDTO]'
@@ -49,7 +50,7 @@ class ServerDB(BaseDB):
 
             # 借由通信系统发送本地广播事件，通知该 MOD 内的数据变化
             NotifyServer.getSystem().BroadcastEvent(DB_CHANGE_EVENT, {
-                'key': key,             # 拼接 UID 后的真实的 key
+                'key': key,  # 拼接 UID 后的真实的 key
                 'newValue': dto.value,
                 'oldValue': nowDTO.value,
                 'extraValue': dto.extraValue
@@ -330,7 +331,7 @@ def _receiveClientUIDDBMessage(event):
         if allDataDict:
             batch = []
             isHook = False
-            for key, value in allDataDict.iteritems():
+            for key, value in allDataDict.items():
                 if isinstance(key, basestring) and key.startswith(preKey):
                     if isinstance(value, basestring) and DBDTO.KEY in value:
                         dto = DBDTO.parseToObject(JSONUtil.convertUnicodeToStr(json.loads(value)))
@@ -339,12 +340,16 @@ def _receiveClientUIDDBMessage(event):
                             batch.append(dto)
                     elif callable(serverDB._hook):
                         _key = key
-                        if key.endswith(uid):
-                            _key = key[:-len(uid)]
-                        dto = serverDB._hook(serverDB, _key, value, uid)
+                        isEndNone = False
+                        if _key.endswith('None'):
+                            _key = _key[:-len('None')] + '0'
+                            isEndNone = True
+                        if _key.endswith(uid):
+                            _key = _key[:-len(uid)]
+                        dto = serverDB._hook(serverDB, _key, value, '0' if isEndNone else uid)
                         if dto is not None and dto.uid == uid:
                             batch.append(dto)
-                            serverDB.set(key, json.dumps(dto.parseToSave()), False)
+                            serverDB.set(_key + uid, json.dumps(dto.parseToSave()), False)
                             isHook = True
 
                 # 优化，不让一个网络包过大（限制在 512 KB 多一点）
