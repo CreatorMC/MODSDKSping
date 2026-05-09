@@ -20,6 +20,7 @@ class ServerDB(BaseDB):
         super(ServerDB, self).__init__()
         comp = serverApi.GetEngineCompFactory().CreateExtraData(serverApi.GetLevelId())
         self.set = comp.SetExtraData
+        self.clean = comp.CleanExtraData
         self.save = comp.SaveExtraData
         self.get = comp.GetExtraData
         self.getWholeExtraData = comp.GetWholeExtraData
@@ -349,6 +350,7 @@ def _receiveClientUIDDBMessage(event):
                         dto = serverDB._hook(serverDB, _key, value, '0' if isEndNone else uid)
                         if dto is not None and dto.uid == uid:
                             batch.append(dto)
+                            serverDB.clean(_key)                                                                    # 删除不带 uid 的旧数据，防止再次进入存档时被再次转换
                             serverDB.set(_key + uid, json.dumps(dto.parseToSave()), False)
                             isHook = True
 
