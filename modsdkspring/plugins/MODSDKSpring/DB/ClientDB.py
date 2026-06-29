@@ -33,6 +33,10 @@ class ClientDB(BaseDB):
         # 超时定时器按 key 管理
         self.timerDict = {}
 
+        # 用于解决山头环境下，客户端数据未按存档隔离的问题
+        self._clearPrivateKeys = None
+        self._clearPublicKeys = None
+
         # 订阅的 key
         self._subscribe = ''
         NotifyClient.getSystem().ListenForEvent(clientApi.GetEngineNamespace(), clientApi.GetEngineSystemName(), "OnLocalPlayerStopLoading", self, self._onLocalPlayerStopLoading, 10)
@@ -163,16 +167,20 @@ class ClientDB(BaseDB):
         dto.operation = DBDTO.SELECT
         return dto.value
 
-    def subscribe(self, preKey):
-        # type: (str) -> None
+    def subscribe(self, preKey, clearPrivateKeys=None, clearPublicKeys=None):
+        # type: (str, 'list | None', 'list | None') -> None
         """
         客户端订阅数据
         preKey: 订阅的 key 的前缀
+        clearPrivateKeys: 当服务端无私有数据时，要清空的私有静态 key（私有 key 的末尾会自动拼接 uid，无需显式拼接）
+        clearPublicKeys: 当服务端无共享数据时，要清空的共享静态 key
         备注：订阅后，客户端会在 OnLocalPlayerStopLoading 事件触发后，将本地玩家的 UID 发送至服务端，以获取玩家私有数据
         订阅的数据必须为使用 insert、delete、update 方法保存的数据，否则将会引发错误
         推荐在客户端系统调用 __init__ 方法时进行订阅
         """
         self._subscribe = preKey
+        self._clearPrivateKeys = list(clearPrivateKeys) if clearPrivateKeys else None
+        self._clearPublicKeys = list(clearPublicKeys) if clearPublicKeys else None
 
     def getUID(self):
         # type: () -> str
@@ -288,3 +296,19 @@ def _receiveFromServerBatchDBMessage(event):
         for dto in responseBatchDTO.batch:
             clientDB._set(dto)
             logger.info("客户端收到同步数据 key: %s", dto.key + dto.uid)
+
+
+# noinspection PyProtectedMember
+@AllowNotify
+def _receiveFromServerEmptyDBMessage(event):
+    """
+    接收从服务端发起的空数据更新（玩家刚进入存档时，服务端会调用）
+    """
+    isPrivate = event['isPrivate']
+
+    # 清空静态 key
+    keys = clientDB._clearPrivateKeys if isPrivate else clientDB._clearPublicKeys
+    if keys:
+        for key in keys:
+            clientDB.delete(key, isPrivate)
+            logger.info("客户端收到同步数据, 清空数据 key: %s", (key + clientDB.getUID()) if isPrivate else key)

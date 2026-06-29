@@ -242,6 +242,7 @@ class ServerDB(BaseDB):
         playerId = event['playerId']
         if self._subscribe:
             allDataDict = self.getWholeExtraData()
+            isSend = False
             if allDataDict:
                 batch = []
                 isHook = False
@@ -264,6 +265,7 @@ class ServerDB(BaseDB):
                     if memorySize >= 512 * 1024:
                         logger.info("服务端发送同步共享数据大小: %s KB", memorySize / 1024.0)
                         NotifyToClient(playerId, '_receiveFromServerBatchDBMessage', ResponseBatchDTO(True, batch, playerId).parseToDict())
+                        isSend = True
                         batch = []
 
                 if isHook:
@@ -273,6 +275,13 @@ class ServerDB(BaseDB):
                 if batch:
                     logger.info("服务端发送同步共享数据大小: %s KB", MemoryUtil.getMemorySize(batch) / 1024.0)
                     NotifyToClient(playerId, '_receiveFromServerBatchDBMessage', ResponseBatchDTO(True, batch, playerId).parseToDict())
+                    isSend = True
+
+            # 如果没有数据发送，发给客户端空数据，而不是保持静默
+            if not isSend:
+                NotifyToClient(playerId, '_receiveFromServerEmptyDBMessage', {
+                    'isPrivate': False
+                })
 
 
 serverDB = ServerDB()
@@ -329,6 +338,7 @@ def _receiveClientUIDDBMessage(event):
     preKey = event['_subscribe']
     if preKey:
         allDataDict = serverDB.getWholeExtraData()
+        isSend = False
         if allDataDict:
             batch = []
             isHook = False
@@ -359,6 +369,7 @@ def _receiveClientUIDDBMessage(event):
                 if memorySize >= 512 * 1024:
                     logger.info("服务端发送同步私有数据大小: %s KB", memorySize / 1024.0)
                     NotifyToClient(playerId, '_receiveFromServerBatchDBMessage', ResponseBatchDTO(True, batch, playerId).parseToDict())
+                    isSend = True
                     batch = []
 
             if isHook:
@@ -368,3 +379,10 @@ def _receiveClientUIDDBMessage(event):
             if batch:
                 logger.info("服务端发送同步私有数据大小: %s KB", MemoryUtil.getMemorySize(batch) / 1024.0)
                 NotifyToClient(playerId, '_receiveFromServerBatchDBMessage', ResponseBatchDTO(True, batch, playerId).parseToDict())
+                isSend = True
+
+        # 如果没有数据发送，发给客户端空数据，而不是保持静默
+        if not isSend:
+            NotifyToClient(playerId, '_receiveFromServerEmptyDBMessage', {
+                'isPrivate': True
+            })
