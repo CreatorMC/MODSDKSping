@@ -58,6 +58,7 @@ class ServerDB(BaseDB):
             })
             return True, dto
 
+        logger.error("版本不一致！")
         return False, nowDTO
 
     def _get(self, key, uid):
@@ -121,6 +122,7 @@ class ServerDB(BaseDB):
 
         # 确保在 uid 不为空的情况下，playerId 也不为空，反之亦然
         if bool(uid) ^ bool(playerId):
+            logger.error("玩家 UID %s 和 playerId %s 需要同时存在/不存在，请检查您传递的参数！", uid, playerId)
             return
 
         nowDTO = self._get(key, uid)
@@ -177,6 +179,7 @@ class ServerDB(BaseDB):
         """
         # 确保在 uid 不为空的情况下，playerId 也不为空，反之亦然
         if bool(uid) ^ bool(playerId):
+            logger.error("玩家 UID %s 和 playerId %s 需要同时存在/不存在，请检查您传递的参数！", uid, playerId)
             return
 
         nowDTO = self._get(key, uid)
