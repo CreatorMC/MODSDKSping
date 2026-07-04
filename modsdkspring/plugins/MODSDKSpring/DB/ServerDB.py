@@ -33,6 +33,20 @@ class ServerDB(BaseDB):
         NotifyServer.getSystem().ListenForEvent(serverApi.GetEngineNamespace(), serverApi.GetEngineSystemName(), "ClientLoadAddonsFinishServerEvent", self,
                                                 self.ClientLoadAddonsFinishServerEvent, 10)
 
+    # noinspection PyMethodMayBeStatic
+    def _dictToSafeJsonStr(self, tempDict):
+        """
+        字典转安全 JSON 字符串（json.dumps 无法解码的内容，使用 base64 编码）
+        """
+        return json.dumps(JSONUtil.safeEncode(tempDict))
+
+    # noinspection PyMethodMayBeStatic
+    def _dictToSafeDict(self, tempDict):
+        """
+        字典转安全字典（unicode 转 str 且安全解码 base64 编码内容）
+        """
+        return JSONUtil.safeDecode(JSONUtil.convertUnicodeToStr(tempDict))
+
     def _set(self, dto, nowDTO=None):
         # type: (DBDTO, DBDTO) -> 'tuple[bool, DBDTO]'
         if nowDTO is None:
@@ -47,7 +61,7 @@ class ServerDB(BaseDB):
             if dto.uid:
                 key = dto.key + dto.uid
 
-            self.set(key, json.dumps(dto.parseToSave()), True)
+            self.set(key, self._dictToSafeJsonStr(dto.parseToSave()), True)
 
             # 借由通信系统发送本地广播事件，通知该 MOD 内的数据变化
             NotifyServer.getSystem().BroadcastEvent(DB_CHANGE_EVENT, {
@@ -90,7 +104,7 @@ class ServerDB(BaseDB):
                 DBDTO.VALUE: tempDict
             }
 
-        tempDict = JSONUtil.convertUnicodeToStr(tempDict)
+        tempDict = self._dictToSafeDict(tempDict)
         dto = None
         if DBDTO.VALUE in tempDict:
             tempDict[DBDTO.KEY] = key
@@ -252,7 +266,7 @@ class ServerDB(BaseDB):
                 for key, value in allDataDict.iteritems():
                     if isinstance(key, basestring) and key.startswith(self._subscribe):
                         if isinstance(value, basestring) and DBDTO.KEY in value:
-                            dto = DBDTO.parseToObject(JSONUtil.convertUnicodeToStr(json.loads(value)))
+                            dto = DBDTO.parseToObject(self._dictToSafeDict(json.loads(value)))
                             # 排除玩家私有数据
                             if not dto.uid:
                                 batch.append(dto)
@@ -260,7 +274,7 @@ class ServerDB(BaseDB):
                             dto = self._hook(self, key, value)
                             if dto is not None and not dto.uid:
                                 batch.append(dto)
-                                self.set(key, json.dumps(dto.parseToSave()), False)
+                                self.set(key, self._dictToSafeJsonStr(dto.parseToSave()), False)
                                 isHook = True
 
                     # 优化，不让一个网络包过大（限制在 512 KB 多一点）
@@ -348,7 +362,7 @@ def _receiveClientUIDDBMessage(event):
             for key, value in allDataDict.items():
                 if isinstance(key, basestring) and key.startswith(preKey):
                     if isinstance(value, basestring) and DBDTO.KEY in value:
-                        dto = DBDTO.parseToObject(JSONUtil.convertUnicodeToStr(json.loads(value)))
+                        dto = DBDTO.parseToObject(serverDB._dictToSafeDict(json.loads(value)))
                         # 只保留玩家私有数据
                         if dto.uid == uid:
                             batch.append(dto)
@@ -364,7 +378,7 @@ def _receiveClientUIDDBMessage(event):
                         if dto is not None and dto.uid == uid:
                             batch.append(dto)
                             serverDB.clean(_key)                                                                    # 删除不带 uid 的旧数据，防止再次进入存档时被再次转换
-                            serverDB.set(_key + uid, json.dumps(dto.parseToSave()), False)
+                            serverDB.set(_key + uid, serverDB._dictToSafeJsonStr(dto.parseToSave()), False)
                             isHook = True
 
                 # 优化，不让一个网络包过大（限制在 512 KB 多一点）

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import base64
 
 
 class JSONUtil(object):
@@ -29,5 +30,39 @@ class JSONUtil(object):
             return {convert(key): convert(value) for key, value in obj.iteritems()}
 
         # 4. 其他类型直接返回
+        else:
+            return obj
+
+    @staticmethod
+    def safeEncode(obj):
+        """
+        将对象安全的转为 json.dumps 能够编码的对象
+        """
+
+        if isinstance(obj, str):
+            try:
+                return obj.decode('utf-8')
+            except UnicodeDecodeError:
+                # 用特殊标记包装，用于识别
+                return {'__modsdkspring_db_binary__': True, 'data': base64.b64encode(obj).decode('ascii')}
+        elif isinstance(obj, dict):
+            return {JSONUtil.safeEncode(k): JSONUtil.safeEncode(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [JSONUtil.safeEncode(item) for item in obj]
+        else:
+            return obj
+
+    @staticmethod
+    def safeDecode(obj):
+        """
+        将 safeEncode 编码的对象安全解码
+        """
+
+        if isinstance(obj, dict) and obj.get('__modsdkspring_db_binary__') is True:
+            return base64.b64decode(obj['data'])
+        elif isinstance(obj, dict):
+            return {k: JSONUtil.safeDecode(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [JSONUtil.safeDecode(item) for item in obj]
         else:
             return obj
